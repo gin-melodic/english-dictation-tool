@@ -1,0 +1,6 @@
+{
+  "name": "English Dictation Tool",
+  "description": "A simple and effective tool for English word dictation with manual control and text-to-speech support.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
