@@ -57,15 +57,15 @@ export default function DictationCard({
   };
 
   return (
-    <div className="w-full max-w-2xl bg-white border-[6px] border-black p-8 md:p-12 shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] relative">
+    <div className="w-full max-w-2xl bg-white border-4 md:border-[6px] border-black p-4 md:p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] md:shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] lg:shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] relative">
       {/* Debug Session Monitor (commented out by default) */}
-      {/* 
+      {/*
       <div className="absolute -top-10 left-0 bg-black text-white px-3 py-1 text-[9px] font-mono uppercase tracking-widest flex gap-4 items-center">
         <span>Slot: {currentIndex}</span>
         <span>Word_ID: {currentWord.english.slice(0,3)}...</span>
         <span className="text-gray-500">Live Sync Active</span>
         {onDebugAutofill && (
-          <button 
+          <button
             onClick={onDebugAutofill}
             className="ml-4 bg-red-600 hover:bg-red-700 text-white px-2 py-0.5 rounded flex items-center gap-1 transition-colors"
             title="DEBUG: Fill current word inputs"
@@ -76,43 +76,43 @@ export default function DictationCard({
       </div>
       */}
 
-      <div className="flex justify-between items-start mb-12">
+      <div className="flex justify-between items-start mb-8 md:mb-12">
         <div className="flex flex-col">
-          <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Session Progress</span>
-          <div className="text-6xl font-black tabular-nums tracking-tighter">
-            {currentIndex + 1}<span className="text-2xl text-gray-300">/{words.length}</span>
+          <span className="text-[8px] md:text-[10px] font-black uppercase text-gray-400 tracking-widest">Session Progress</span>
+          <div className="text-3xl md:text-5xl lg:text-6xl font-black tabular-nums tracking-tighter">
+            {currentIndex + 1}<span className="text-lg md:text-2xl text-gray-300">/{words.length}</span>
           </div>
         </div>
-        <div className="px-4 py-2 border-2 border-black font-black text-xs uppercase bg-white">
+        <div className="px-3 md:px-4 py-1.5 md:py-2 border-2 border-black font-black text-[9px] md:text-xs uppercase bg-white">
           Listen & Transcribe
         </div>
       </div>
 
-      <div className="flex flex-col items-center mb-16 space-y-8">
+      <div className="flex flex-col items-center mb-10 md:mb-16 space-y-4 md:space-y-6">
         <button
           onClick={handlePlayClick}
           disabled={isPlayDisabled}
-          className={`w-32 h-32 rounded-full border-4 border-black flex items-center justify-center transition-all group ${
-            isPlayDisabled 
-              ? 'bg-gray-100 border-gray-200 text-gray-300 cursor-not-allowed' 
-              : 'bg-white hover:bg-black text-black hover:text-white cursor-pointer active:scale-95'
+          className={`w-24 h-24 md:w-32 md:h-32 rounded-full border-3 md:border-4 border-black flex items-center justify-center transition-all group active:scale-95 ${
+            isPlayDisabled
+              ? 'bg-gray-100 border-gray-200 text-gray-300 cursor-not-allowed'
+              : 'bg-white hover:bg-black text-black hover:text-white cursor-pointer'
           }`}
         >
-          <Volume2 className="w-12 h-12" />
+          <Volume2 className="w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12" />
         </button>
-        <div className="text-center space-y-2">
-          <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${isPlayDisabled ? 'text-red-400' : 'text-gray-400'}`}>
+        <div className="text-center space-y-1 md:space-y-2">
+          <p className={`text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] ${isPlayDisabled ? 'text-red-400' : 'text-gray-400'}`}>
             {isPlayDisabled ? "Quota Finished" : "Click to Play Audio"}
           </p>
-          <p className="text-sm italic font-black text-gray-600 uppercase">
+          <p className="text-xs md:text-sm italic font-black text-gray-600 uppercase">
             (Loop {currentPlayCount} <span className="opacity-30">of</span> {settings.maxPlays})
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-12">
-        <div className="space-y-2">
-          <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">English String</label>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-8 md:mb-12">
+        <div className="space-y-1 md:space-y-2">
+          <label className="text-[8px] md:text-[10px] font-black uppercase text-gray-400 tracking-widest">English String</label>
           <input
             type="text"
             autoComplete="off"
@@ -121,11 +121,11 @@ export default function DictationCard({
             value={userAnswers[currentIndex]?.english || ''}
             onChange={(e) => onEnglishChange(e.target.value)}
             placeholder="Input..."
-            className="w-full bg-gray-50 border-2 border-black rounded-none p-6 text-2xl font-black focus:bg-white outline-none transition-all placeholder:text-gray-200"
+            className="w-full bg-gray-50 border-2 border-black rounded-none p-4 md:p-6 text-lg md:text-2xl font-black focus:bg-white outline-none transition-all placeholder:text-gray-200"
           />
         </div>
-        <div className="space-y-2">
-          <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Translation Data</label>
+        <div className="space-y-1 md:space-y-2">
+          <label className="text-[8px] md:text-[10px] font-black uppercase text-gray-400 tracking-widest">Translation Data</label>
           <input
             type="text"
             autoComplete="off"
@@ -133,27 +133,27 @@ export default function DictationCard({
             value={userAnswers[currentIndex]?.translation || ''}
             onChange={(e) => onTranslationChange(e.target.value)}
             placeholder="Input..."
-            className="w-full bg-gray-50 border-2 border-black rounded-none p-6 text-2xl font-black focus:bg-white outline-none transition-all placeholder:text-gray-200"
+            className="w-full bg-gray-50 border-2 border-black rounded-none p-4 md:p-6 text-lg md:text-2xl font-black focus:bg-white outline-none transition-all placeholder:text-gray-200"
           />
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 h-16 w-full">
-        <button 
+      <div className="grid grid-cols-2 gap-3 md:gap-4 h-14 md:h-16 w-full">
+        <button
           onClick={onSkip}
-          className="border-4 border-black flex items-center justify-center font-black uppercase tracking-widest hover:bg-gray-100 transition-colors"
+          className="border-2 md:border-4 border-black flex items-center justify-center font-black uppercase tracking-widest hover:bg-gray-100 transition-colors text-xs md:text-sm"
         >
           Skip Entry
         </button>
-        <button 
+        <button
           onClick={onNext}
-          className="bg-black text-white flex items-center justify-center font-black uppercase tracking-widest hover:bg-gray-800 transition-colors shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)]"
+          className="bg-black text-white flex items-center justify-center font-black uppercase tracking-widest hover:bg-gray-800 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] text-xs md:text-sm"
         >
           {currentIndex === words.length - 1 ? 'End Session' : 'Next Entry'}
         </button>
       </div>
 
-      <div className="mt-16 flex space-x-12 opacity-30">
+      <div className="mt-12 md:mt-16 flex space-x-8 md:space-x-12 opacity-30">
         <div className="flex flex-col items-center">
           <span className="text-xs font-black">ESC</span>
           <span className="text-[9px] uppercase font-bold tracking-widest">Exit</span>
