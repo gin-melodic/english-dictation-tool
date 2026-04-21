@@ -12,7 +12,7 @@ import WordInputPanel from './components/WordInputPanel';
 import WelcomePanel from './components/WelcomePanel';
 import DictationCard from './components/DictationCard';
 import ContinuousMode from './components/ContinuousMode';
-import DataIntegrityCheck from './components/DataIntegrityCheck';
+
 import ResultsAudit from './components/ResultsAudit';
 import AISettingsModal from './components/AISettingsModal';
 
@@ -137,7 +137,7 @@ export default function App() {
     setSkippedIndices(prev => new Set(prev).add(currentIndex));
     cancelSpeech();
     if (currentIndex === words.length - 1) {
-      setStep(5);
+      setStep(3);
     } else {
       setCurrentIndex(prev => prev + 1);
     }
@@ -146,7 +146,7 @@ export default function App() {
   const handleNext = useCallback(() => {
     cancelSpeech();
     if (currentIndex === words.length - 1) {
-      setStep(5);
+      setStep(3);
     } else {
       setCurrentIndex(prev => prev + 1);
     }
@@ -373,22 +373,6 @@ export default function App() {
             </motion.div>
           )}
 
-          {step === 5 && (
-            <motion.div 
-              key="step5"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-            >
-              <DataIntegrityCheck
-                sessionManifest={sessionManifest}
-                words={words}
-                userAnswers={userAnswers}
-                onConfirm={finalizeSession}
-                onBack={() => setStep(2)}
-              />
-            </motion.div>
-          )}
-
           {step === 3 && (
             <motion.div 
               key="step3"
@@ -403,7 +387,7 @@ export default function App() {
                 isEvaluating={isEvaluating}
                 sessionSource={sessionSource}
                 onReset={handleReset}
-                onBackToIntegrity={() => setStep(5)}
+                onBackToIntegrity={() => setStep(2)}
               />
             </motion.div>
           )}
