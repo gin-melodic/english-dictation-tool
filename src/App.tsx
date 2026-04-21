@@ -133,35 +133,6 @@ export default function App() {
     }));
   }, [currentIndex]);
 
-  const handleSkip = useCallback(() => {
-    setSkippedIndices(prev => new Set(prev).add(currentIndex));
-    cancelSpeech();
-    if (currentIndex === words.length - 1) {
-      setStep(3);
-    } else {
-      setCurrentIndex(prev => prev + 1);
-    }
-  }, [currentIndex, words.length, cancelSpeech]);
-
-  const handleNext = useCallback(() => {
-    cancelSpeech();
-    if (currentIndex === words.length - 1) {
-      setStep(3);
-    } else {
-      setCurrentIndex(prev => prev + 1);
-    }
-  }, [currentIndex, words.length, cancelSpeech]);
-
-  const handleDebugAutofill = useCallback(() => {
-    setUserAnswers(prev => ({
-      ...prev,
-      [currentIndex]: { 
-        english: words[currentIndex].english, 
-        translation: words[currentIndex].translation 
-      }
-    }));
-  }, [currentIndex, words]);
-
   // AI Evaluation
   const evaluateResultsWithAI = useCallback(async (finalAnswers: Record<number, { english: string; translation: string }>) => {
     if (!aiConfig.apiKey.trim()) {
@@ -250,6 +221,35 @@ export default function App() {
     await evaluateResultsWithAI(userAnswers);
   }, [userAnswers, evaluateResultsWithAI]);
 
+  const handleSkip = useCallback(() => {
+    setSkippedIndices(prev => new Set(prev).add(currentIndex));
+    cancelSpeech();
+    if (currentIndex === words.length - 1) {
+      finalizeSession();
+    } else {
+      setCurrentIndex(prev => prev + 1);
+    }
+  }, [currentIndex, words.length, cancelSpeech, finalizeSession]);
+
+  const handleNext = useCallback(() => {
+    cancelSpeech();
+    if (currentIndex === words.length - 1) {
+      finalizeSession();
+    } else {
+      setCurrentIndex(prev => prev + 1);
+    }
+  }, [currentIndex, words.length, cancelSpeech, finalizeSession]);
+
+  const handleDebugAutofill = useCallback(() => {
+    setUserAnswers(prev => ({
+      ...prev,
+      [currentIndex]: { 
+        english: words[currentIndex].english, 
+        translation: words[currentIndex].translation 
+      }
+    }));
+  }, [currentIndex, words]);
+
   // Continuous mode effect
   useEffect(() => {
     let timeout: NodeJS.Timeout;
@@ -283,6 +283,19 @@ export default function App() {
     }
     return () => clearTimeout(timeout);
   }, [step, isContinuousPlaying, currentIndex, words, continuousRepeat, settings.maxPlays, speak]);
+
+  // Parse ai-config from localStorage on mount
+  useEffect(() => {
+    try {
+      const storedConfig = localStorage.getItem('ai-config');
+      if (storedConfig) {
+        console.info('Loaded AI config from localStorage', JSON.parse(storedConfig));
+        setAiConfig(JSON.parse(storedConfig));
+      }
+    } catch {
+      // Ignore parsing errors and use default config
+    }
+  }, []);
 
   const handleContinuousToggle = useCallback(() => {
     setIsContinuousPlaying(prev => !prev);
