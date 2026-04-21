@@ -1,7 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { Volume2, Wrench } from 'lucide-react';
 import { WordEntry, AppSettings } from '../types';
-import { useSpeechSynthesis } from '../hooks/useSpeechSynthesis';
 
 interface DictationCardProps {
   currentIndex: number;
@@ -9,7 +8,7 @@ interface DictationCardProps {
   settings: AppSettings;
   userAnswers: Record<number, { english: string; translation: string }>;
   playCounts: Record<number, number>;
-  onPlay: () => void;
+  onPlay: (word: string) => void;
   onEnglishChange: (value: string) => void;
   onTranslationChange: (value: string) => void;
   onSkip: () => void;
@@ -31,7 +30,6 @@ export default function DictationCard({
   onDebugAutofill
 }: DictationCardProps) {
   const englishInputRef = useRef<HTMLInputElement>(null);
-  const { speak } = useSpeechSynthesis(settings);
 
   const currentWord = words[currentIndex];
   const currentPlayCount = playCounts[currentIndex] || 0;
@@ -45,8 +43,13 @@ export default function DictationCard({
   }, [currentIndex]);
 
   const handlePlayClick = () => {
-    speak(currentWord.english);
-    onPlay();
+    // Only one speak() call — the parent's onPlay handler is the
+    // single owner of useSpeechSynthesis and calls speak() there.
+    // Previously, DictationCard called speak() here AND the parent
+    // called speak() inside onPlay(), giving two independent
+    // useSpeechSynthesis instances with separate timerRefs — so
+    // neither debounced the other and synth.speak() fired twice.
+    onPlay(currentWord.english);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
