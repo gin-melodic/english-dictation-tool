@@ -50,10 +50,10 @@ export default function DictationCard({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      onNext();
-    }
+    // if (e.key === 'Enter') {
+    //   e.preventDefault();
+    //   onNext();
+    // }
   };
 
   return (
@@ -158,10 +158,10 @@ export default function DictationCard({
           <span className="text-xs font-black">ESC</span>
           <span className="text-[9px] uppercase font-bold tracking-widest">Exit</span>
         </div>
-        <div className="flex flex-col items-center">
+        {/* <div className="flex flex-col items-center">
           <span className="text-xs font-black">ENTER</span>
           <span className="text-[9px] uppercase font-bold tracking-widest">Confirm</span>
-        </div>
+        </div> */}
         <div className="flex flex-col items-center">
           <span className="text-xs font-black">SPACE</span>
           <span className="text-[9px] uppercase font-bold tracking-widest">Repeat</span>
