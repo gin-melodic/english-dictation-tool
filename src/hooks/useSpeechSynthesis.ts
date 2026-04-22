@@ -16,42 +16,61 @@ import { AppSettings } from '../types';
  *  4. Specific high-quality voice names known to produce clear output.
  */
 function scoreVoice(voice: SpeechSynthesisVoice): number {
-  let score = 0;
+  const lang = voice.lang.toLowerCase().replace('_', '-');
   const name = voice.name.toLowerCase();
-  const lang = voice.lang.toLowerCase();
 
-  // Exclude all non-English voices
   if (!lang.startsWith('en')) return -1;
 
-  // Prefer en-US; other English variants are acceptable fallback
-  if (lang === 'en-us') score += 20;
-  else if (lang.startsWith('en')) score += 10;
+  let score = 0;
 
-  // On-device voices are more stable and lower-latency than network voices
-  if (voice.localService) score += 15;
+  // ── Tier 1: Audio quality keywords ────────────────────────────────────
+  const isExplicitlyNeural =
+    name.includes('neural')        ||
+    name.includes('premium')       ||
+    name.includes('enhanced')      ||
+    name.includes('online (natural)');
 
-  // Neural / premium / enhanced voices articulate individual words cleanly
-  if (name.includes('neural'))   score += 30;
-  if (name.includes('premium'))  score += 25;
-  if (name.includes('enhanced')) score += 20;
-  if (name.includes('natural'))  score += 15;
+  if (name.includes('neural'))           score += 50;
+  if (name.includes('premium'))          score += 40;
+  if (name.includes('enhanced'))         score += 35;
+  if (name.includes('online (natural)')) score += 30;
+  else if (name.includes('natural'))     score += 15;
 
-  // Known high-quality voices per platform
-  // macOS / iOS
-  if (name.includes('samantha')) score += 18;
-  if (name.includes('ava'))      score += 18;
-  if (name.includes('alex'))     score += 16;
-  // Windows (Neural voices)
-  if (name.includes('aria'))     score += 22;
-  if (name.includes('jenny'))    score += 22;
-  if (name.includes('guy'))      score += 20;
-  // Android / Chrome
+  // ── Tier 2: Locale ─────────────────────────────────────────────────────
+  if (lang === 'en-us')                  score += 20;
+  else if (lang.startsWith('en'))        score += 10;
+
+  // ── Tier 3: Cloud/local signal ────────────────────────────────────────
+  if (!voice.localService) {
+    if (isExplicitlyNeural) {
+      // Cloud + confirmed neural: small bonus for network freshness
+      // (model updates don't require OS updates)
+      score += 10;
+    } else {
+      // Cloud without quality signal: cautious bonus
+      // Covers Google/MS voices that omit quality keywords in their name
+      score += 18;
+    }
+  } else {
+    // On-device: latency advantage, but no quality premium unless name confirms it
+    score += 5;
+  }
+
+  // ── Tier 4: Known high-quality names ──────────────────────────────────
+  if (name.includes('samantha'))              score += 18;
+  if (name.includes('ava'))                   score += 18;
+  if (name.includes('alex'))                  score += 12;
+  if (name.includes('daniel'))                score += 16;
+  if (name.includes('karen'))                 score += 14;
+  if (name.includes('microsoft aria'))        score += 22;
+  if (name.includes('microsoft jenny'))       score += 22;
+  if (name.includes('microsoft guy'))         score += 20;
   if (name.includes('google') && lang === 'en-us') score += 18;
 
-  // Penalise voices known to mangle short words
-  if (name.includes('compact')) score -= 10;
-  if (name.includes('espeak'))  score -= 20;
-  if (name.includes('mbrola'))  score -= 20;
+  // ── Penalties ──────────────────────────────────────────────────────────
+  if (name.includes('compact'))              score -= 15;
+  if (name.includes('espeak'))               score -= 30;
+  if (name.includes('mbrola'))               score -= 30;
 
   return score;
 }
@@ -73,12 +92,17 @@ function getBestVoice(synth: SpeechSynthesis): SpeechSynthesisVoice | null {
   let bestScore = -Infinity;
 
   for (const v of voices) {
+    if (!v.lang.toLowerCase().startsWith('en-us')) {
+      continue;
+    }
     const s = scoreVoice(v);
+    console.info(`[useSpeechSynthesis] Voice candidate: "${v.name}" (${v.lang}) — score: ${s}`);
     if (s > bestScore) {
       bestScore = s;
       best = v;
     }
   }
+  console.info(`[useSpeechSynthesis] Selected voice: "${best?.name}" (${best?.lang}) — score: ${bestScore}`);
 
   if (best && bestScore >= 0) cachedVoice = best;
   return best;
