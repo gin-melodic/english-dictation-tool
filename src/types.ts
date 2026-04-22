@@ -17,6 +17,7 @@ export interface DictationResult {
 export interface AppSettings {
   maxPlays: number;
   voiceRate: number;
+  autoPlayFirst: boolean;
 }
 
 export interface AIConfig {

@@ -30,6 +30,7 @@ export default function DictationCard({
   onDebugAutofill
 }: DictationCardProps) {
   const englishInputRef = useRef<HTMLInputElement>(null);
+  const autoPlayedRef = useRef<Set<number>>(new Set());
 
   const currentWord = words[currentIndex];
   const currentPlayCount = playCounts[currentIndex] || 0;
@@ -41,6 +42,18 @@ export default function DictationCard({
       englishInputRef.current.focus();
     }
   }, [currentIndex]);
+
+  // Auto-play first audio for each new word when setting is enabled
+  useEffect(() => {
+    if (
+      settings.autoPlayFirst &&
+      !autoPlayedRef.current.has(currentIndex) &&
+      !isPlayDisabled
+    ) {
+      autoPlayedRef.current.add(currentIndex);
+      onPlay(currentWord.english);
+    }
+  }, [currentIndex, settings.autoPlayFirst, onPlay, currentWord.english, isPlayDisabled]);
 
   const handlePlayClick = () => {
     // Only one speak() call — the parent's onPlay handler is the

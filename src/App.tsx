@@ -34,7 +34,7 @@ export default function App() {
   const [step, setStep] = useState<Step>(1);
   const [rawInput, setRawInput] = useState('');
   const [words, setWords] = useState<WordEntry[]>([]);
-  const [settings, setSettings] = useState<AppSettings>({ maxPlays: 2, voiceRate: 1.0 });
+  const [settings, setSettings] = useState<AppSettings>({ maxPlays: 2, voiceRate: 1.0, autoPlayFirst: true });
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAiSettings, setShowAiSettings] = useState(false);
   const [aiConfig, setAiConfig] = useState<AIConfig>({
@@ -76,7 +76,7 @@ export default function App() {
   const handleStartContinuous = useCallback(() => {
     const parsed = parseInput(rawInput);
     if (parsed.length === 0) return;
-    
+
     const shuffled = shuffleArray(parsed);
 
     setSessionSource('continuous');
@@ -84,8 +84,8 @@ export default function App() {
     setStep(4);
     setCurrentIndex(0);
     setContinuousRepeat(0);
-    setIsContinuousPlaying(true);
-  }, [rawInput]);
+    setIsContinuousPlaying(settings.autoPlayFirst);
+  }, [rawInput, settings.autoPlayFirst]);
 
   const handleAbort = useCallback(() => {
     cancelSpeech();
@@ -259,7 +259,7 @@ export default function App() {
       speak(currentWord.english);
 
       const isLastRepeat = (continuousRepeat + 1) >= settings.maxPlays;
-      let delay = 2000;
+      let delay = 3000;
 
       if (isLastRepeat) {
         const baseDelay = 4000;
