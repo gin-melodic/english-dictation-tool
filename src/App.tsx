@@ -145,7 +145,7 @@ export default function App() {
 
     setIsEvaluating(true);
     setShowAiOutput(true);
-    setAiOutputLines(['正在连接 AI...']);
+    setAiOutputLines(['Connecting to AI...']);
 
     try {
       const payload = words.map((w, idx) => ({
@@ -171,10 +171,10 @@ export default function App() {
         Data: ${JSON.stringify(payload)}`;
 
       if (aiConfig.provider === 'gemini') {
-        setAiOutputLines(prev => [...prev, '▶ 使用 Gemini 模型...', '   正在发送请求...']);
+        setAiOutputLines(prev => [...prev, '> Using Gemini model...', '  Sending request...']);
         const ai = new GoogleGenAI({ apiKey: aiConfig.apiKey });
         
-        const response = await ai.models.generateContent({
+        const stream = await ai.models.generateContentStream({
           model: "gemini-3-flash-preview",
           contents: prompt,
           config: {
@@ -194,10 +194,26 @@ export default function App() {
           }
         });
         
-        setAiOutputLines(prev => [...prev, '▶ 收到响应，解析结果...', `   共 ${payload.length} 项待评估`]);
-        results = JSON.parse(response.text || '[]');
+        let fullText = '';
+        let dots = 0;
+        for await (const chunk of stream) {
+          const text = chunk.text;
+          if (text) {
+            fullText += text;
+            dots = (dots + 1) % 4;
+            const loading = '▌'.slice(0, dots + 1);
+            setAiOutputLines(prev => {
+              const newLines = [...prev];
+              newLines[newLines.length - 1] = `  ${loading} Analyzing semantic...`;
+              return newLines;
+            });
+          }
+        }
+        
+        setAiOutputLines(prev => [...prev, '', '> Parsing complete']);
+        results = JSON.parse(fullText || '[]');
       } else {
-        setAiOutputLines(prev => [...prev, `▶ 使用 OpenRouter: ${aiConfig.modelId}`, '   正在发送请求...']);
+        setAiOutputLines(prev => [...prev, `> Using OpenRouter: ${aiConfig.modelId}`, '  Sending request...']);
         
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
@@ -208,20 +224,48 @@ export default function App() {
           body: JSON.stringify({
             "model": aiConfig.modelId || "openai/gpt-oss-120b:free",
             "messages": [{ "role": "user", "content": prompt }],
-            "response_format": { "type": "json_object" }
+            "response_format": { "type": "json_object" },
+            "stream": true
           })
         });
         
-        setAiOutputLines(prev => [...prev, '   等待响应...']);
-        const data = await response.json();
-        const content = data.choices[0].message.content;
-        const parsed = JSON.parse(content);
+        setAiOutputLines(prev => [...prev, '  Waiting for response...']);
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+        let fullContent = '';
         
-        setAiOutputLines(prev => [...prev, '▶ 收到响应，解析结果...', `   共 ${payload.length} 项待评估`]);
+        if (reader) {
+          let dots = 0;
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split('\n').filter(line => line.trim() && line.includes('content'));
+            
+            for (const line of lines) {
+              const match = line.match(/"content":"([^"]*)"/);
+              if (match) {
+                const content = match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+                fullContent += content;
+                dots = (dots + 1) % 4;
+                const loading = '▌'.slice(0, dots + 1);
+                setAiOutputLines(prev => {
+                  const newLines = [...prev];
+                  newLines[newLines.length - 1] = `  ${loading} Analyzing semantic...`;
+                  return newLines;
+                });
+              }
+            }
+          }
+        }
+        
+        setAiOutputLines(prev => [...prev, '', '> Parsing complete']);
+        const parsed = JSON.parse(fullContent || '{}');
         results = Array.isArray(parsed) ? parsed : (parsed.results || Object.values(parsed)[0]);
       }
 
-      setAiOutputLines(prev => [...prev, '▶ 正在评估...']);
+      setAiOutputLines(prev => [...prev, '> Evaluating...']);
       results.forEach((res: any, idx: number) => {
         const word = words[res.index];
         const status = res.isCorrect ? '✓' : '✗';
@@ -233,7 +277,7 @@ export default function App() {
         verdictMap[res.index] = { isCorrect: res.isCorrect, reason: res.reason };
       });
       
-      setAiOutputLines(prev => [...prev, '', `✓ 评估完成，共 ${results.length} 项`]);
+      setAiOutputLines(prev => [...prev, '', `> Evaluation complete - ${results.length} items processed`]);
       setAiVerdicts(verdictMap);
       
       setTimeout(() => {
@@ -242,7 +286,7 @@ export default function App() {
       }, 1500);
     } catch (error) {
       console.error('[AI] Evaluation failed:', error);
-      setAiOutputLines(prev => [...prev, '', `✗ 错误: ${error}`]);
+      setAiOutputLines(prev => [...prev, '', `> ERROR: ${error}`]);
       setTimeout(() => {
         setShowAiOutput(false);
         setAiOutputLines([]);
