@@ -15,6 +15,7 @@ import ContinuousMode from './components/ContinuousMode';
 
 import ResultsAudit from './components/ResultsAudit';
 import AISettingsModal from './components/AISettingsModal';
+import AIOutputStream from './components/AIOutputStream';
 
 import { useSpeechSynthesis } from './hooks/useSpeechSynthesis';
 import { parseInput, shuffleArray } from './utils/helpers';
@@ -51,6 +52,8 @@ export default function App() {
   const [continuousRepeat, setContinuousRepeat] = useState(0);
   const [sessionSource, setSessionSource] = useState<SessionSource>('interactive');
   const [sessionManifest, setSessionManifest] = useState<SessionManifestItem[]>([]);
+  const [showAiOutput, setShowAiOutput] = useState(false);
+  const [aiOutputLines, setAiOutputLines] = useState<string[]>([]);
 
   // Hooks
   const { speak, cancel: cancelSpeech } = useSpeechSynthesis(settings);
@@ -141,6 +144,9 @@ export default function App() {
     }
 
     setIsEvaluating(true);
+    setShowAiOutput(true);
+    setAiOutputLines(['正在连接 AI...']);
+
     try {
       const payload = words.map((w, idx) => ({
         index: idx,
@@ -151,6 +157,7 @@ export default function App() {
 
       if (payload.length === 0) {
         setIsEvaluating(false);
+        setShowAiOutput(false);
         return;
       }
 
@@ -164,7 +171,9 @@ export default function App() {
         Data: ${JSON.stringify(payload)}`;
 
       if (aiConfig.provider === 'gemini') {
+        setAiOutputLines(prev => [...prev, '▶ 使用 Gemini 模型...', '   正在发送请求...']);
         const ai = new GoogleGenAI({ apiKey: aiConfig.apiKey });
+        
         const response = await ai.models.generateContent({
           model: "gemini-3-flash-preview",
           contents: prompt,
@@ -184,8 +193,12 @@ export default function App() {
             }
           }
         });
+        
+        setAiOutputLines(prev => [...prev, '▶ 收到响应，解析结果...', `   共 ${payload.length} 项待评估`]);
         results = JSON.parse(response.text || '[]');
       } else {
+        setAiOutputLines(prev => [...prev, `▶ 使用 OpenRouter: ${aiConfig.modelId}`, '   正在发送请求...']);
+        
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
           headers: {
@@ -198,19 +211,42 @@ export default function App() {
             "response_format": { "type": "json_object" }
           })
         });
+        
+        setAiOutputLines(prev => [...prev, '   等待响应...']);
         const data = await response.json();
         const content = data.choices[0].message.content;
         const parsed = JSON.parse(content);
+        
+        setAiOutputLines(prev => [...prev, '▶ 收到响应，解析结果...', `   共 ${payload.length} 项待评估`]);
         results = Array.isArray(parsed) ? parsed : (parsed.results || Object.values(parsed)[0]);
       }
+
+      setAiOutputLines(prev => [...prev, '▶ 正在评估...']);
+      results.forEach((res: any, idx: number) => {
+        const word = words[res.index];
+        const status = res.isCorrect ? '✓' : '✗';
+        setAiOutputLines(prev => [...prev, `  ${status} [${idx + 1}] ${word?.english || '?'} → ${res.reason?.substring(0, 30) || ''}...`]);
+      });
 
       const verdictMap: Record<number, AIVerdict> = {};
       results.forEach((res: any) => {
         verdictMap[res.index] = { isCorrect: res.isCorrect, reason: res.reason };
       });
+      
+      setAiOutputLines(prev => [...prev, '', `✓ 评估完成，共 ${results.length} 项`]);
       setAiVerdicts(verdictMap);
+      
+      setTimeout(() => {
+        setShowAiOutput(false);
+        setAiOutputLines([]);
+      }, 1500);
     } catch (error) {
       console.error('[AI] Evaluation failed:', error);
+      setAiOutputLines(prev => [...prev, '', `✗ 错误: ${error}`]);
+      setTimeout(() => {
+        setShowAiOutput(false);
+        setAiOutputLines([]);
+      }, 2000);
     } finally {
       setIsEvaluating(false);
     }
@@ -418,6 +454,13 @@ export default function App() {
           />
         )}
       </AnimatePresence>
+
+      {/* AI Output Stream */}
+      <AIOutputStream
+        isOpen={showAiOutput}
+        outputs={aiOutputLines}
+        onClose={() => setShowAiOutput(false)}
+      />
     </div>
   );
 }
