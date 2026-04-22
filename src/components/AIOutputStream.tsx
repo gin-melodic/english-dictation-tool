@@ -1,5 +1,6 @@
-import React, { useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { X, Brain } from 'lucide-react';
 
 interface AIOutputStreamProps {
   isOpen: boolean;
@@ -16,6 +17,8 @@ export default function AIOutputStream({ isOpen, outputs, onClose }: AIOutputStr
     }
   }, [outputs]);
 
+  const isProcessing = outputs.length > 0 && !outputs[outputs.length - 1]?.includes('Done');
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -23,56 +26,68 @@ export default function AIOutputStream({ isOpen, outputs, onClose }: AIOutputStr
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 md:p-6"
           onClick={onClose}
         >
           <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[70vh] flex flex-col overflow-hidden"
+            initial={{ scale: 0.9, y: 20 }}
+            animate={{ scale: 1, y: 0 }}
+            className="bg-white border-4 md:border-[6px] border-black w-full max-w-md md:max-w-lg p-4 md:p-6 lg:p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] md:shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] relative max-h-[80vh] overflow-hidden flex flex-col"
             onClick={e => e.stopPropagation()}
           >
-            <div className="px-6 py-4 bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex gap-1">
-                  <span className="w-2 h-2 rounded-full bg-white/60 animate-pulse" />
-                  <span className="w-2 h-2 rounded-full bg-white/60 animate-pulse delay-75" />
-                  <span className="w-2 h-2 rounded-full bg-white/60 animate-pulse delay-150" />
+            <button
+              onClick={onClose}
+              className="absolute top-3 md:top-6 right-3 md:right-6 p-1.5 md:p-2 hover:bg-gray-100 transition-colors touch-manipulation z-10"
+            >
+              <X className="w-4 h-4 md:w-6 md:h-6" />
+            </button>
+
+            <div className="mb-4">
+              <div className="flex items-center gap-3 mb-1">
+                <div className="bg-black text-white p-1.5 md:p-2">
+                  <Brain className="w-4 h-4 md:w-5 md:h-5" />
                 </div>
-                <h3 className="text-white font-semibold">AI 评估中...</h3>
+                <h3 className="text-xl md:text-2xl lg:text-3xl font-black uppercase tracking-tighter leading-none">
+                  {isProcessing ? 'AI Processing' : 'Evaluation Complete'}
+                </h3>
               </div>
-              <button
-                onClick={onClose}
-                className="text-white/80 hover:text-white transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+              <p className="text-[8px] md:text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">
+                {isProcessing ? 'Semantic analysis in progress' : 'Results have been saved'}
+              </p>
             </div>
+
+            {isProcessing && (
+              <div className="flex gap-1.5 mb-4">
+                <span className="w-2 h-2 rounded-full bg-black animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-2 h-2 rounded-full bg-black animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-2 h-2 rounded-full bg-black animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
+            )}
 
             <div
               ref={scrollRef}
-              className="flex-1 overflow-y-auto p-6 bg-slate-50 font-mono text-sm leading-relaxed"
+              className="flex-1 overflow-y-auto bg-gray-50 border-2 border-black/10 p-3 md:p-4 font-mono text-xs md:text-sm leading-relaxed"
               style={{
                 userSelect: 'none',
                 WebkitUserSelect: 'none',
               }}
             >
-              {outputs.map((line, idx) => (
-                <div key={idx} className="mb-2">
-                  {line}
+              {outputs.length === 0 ? (
+                <div className="text-gray-400 text-center py-8 uppercase tracking-wider font-bold">
+                  Initializing...
                 </div>
-              ))}
-              {outputs.length === 0 && (
-                <div className="text-slate-400 text-center py-8">
-                  等待 AI 响应...
+              ) : (
+                outputs.map((line, idx) => (
+                  <div key={idx} className="mb-1.5">
+                    {line}
+                  </div>
+                ))
+              )}
+              {isProcessing && (
+                <div className="text-black/50 mt-2">
+                  ▌
                 </div>
               )}
-              <div className="animate-pulse text-indigo-400 mt-4">
-                ▌
-              </div>
             </div>
           </motion.div>
         </motion.div>
