@@ -211,7 +211,23 @@ export default function App() {
         }
         
         setAiOutputLines(prev => [...prev, '', '> Parsing complete']);
-        results = JSON.parse(fullText || '[]');
+        // Clean up content and handle partial JSON
+        const cleanText = fullText.trim().replace(/^[^{[]*|[^}\]]*$/g, '');
+        try {
+          results = JSON.parse(cleanText || '[]');
+        } catch (e) {
+          // Fallback: try to extract first valid JSON array/object
+          const arrMatch = cleanText.match(/\[[\s\S]*\]/);
+          const objMatch = cleanText.match(/\{[\s\S]*\}/);
+          if (arrMatch) {
+            results = JSON.parse(arrMatch[0]);
+          } else if (objMatch) {
+            const parsed = JSON.parse(objMatch[0]);
+            results = Array.isArray(parsed) ? parsed : (parsed.results || Object.values(parsed)[0]);
+          } else {
+            throw e;
+          }
+        }
       } else {
         setAiOutputLines(prev => [...prev, `> Using OpenRouter: ${aiConfig.modelId}`, '  Sending request...']);
         
@@ -236,33 +252,88 @@ export default function App() {
         
         if (reader) {
           let dots = 0;
+          let buffer = '';
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
             
-            const chunk = decoder.decode(value, { stream: true });
-            const lines = chunk.split('\n').filter(line => line.trim() && line.includes('content'));
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
             
             for (const line of lines) {
-              const match = line.match(/"content":"([^"]*)"/);
-              if (match) {
-                const content = match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
-                fullContent += content;
-                dots = (dots + 1) % 4;
-                const loading = '▌'.slice(0, dots + 1);
-                setAiOutputLines(prev => {
-                  const newLines = [...prev];
-                  newLines[newLines.length - 1] = `  ${loading} Analyzing semantic...`;
-                  return newLines;
-                });
+              if (line.startsWith('data: ')) {
+                const data = line.slice(6).trim();
+                if (data === '[DONE]') continue;
+                try {
+                  const parsed = JSON.parse(data);
+                  const content = parsed.choices?.[0]?.delta?.content;
+                  if (content) {
+                    fullContent += content;
+                    dots = (dots + 1) % 4;
+                    const loading = '▌'.slice(0, dots + 1);
+                    setAiOutputLines(prev => {
+                      const newLines = [...prev];
+                      newLines[newLines.length - 1] = `  ${loading} Analyzing semantic...`;
+                      return newLines;
+                    });
+                  }
+                } catch (e) {
+                  // Skip invalid JSON chunks
+                }
               }
             }
           }
         }
         
         setAiOutputLines(prev => [...prev, '', '> Parsing complete']);
-        const parsed = JSON.parse(fullContent || '{}');
-        results = Array.isArray(parsed) ? parsed : (parsed.results || Object.values(parsed)[0]);
+        // Extract valid JSON array from the response
+        const extractJSONArray = (text: string): any[] | null => {
+          // Find the first '[' and match it with the corresponding ']'
+          const startMatch = text.match(/\[[\s\S]*/);
+          if (!startMatch) return null;
+          
+          let start = startMatch.index || 0;
+          let bracketCount = 0;
+          let end = -1;
+          
+          for (let i = start; i < text.length; i++) {
+            if (text[i] === '[') bracketCount++;
+            else if (text[i] === ']') {
+              bracketCount--;
+              if (bracketCount === 0) {
+                end = i;
+                break;
+              }
+            }
+          }
+          
+          if (end !== -1) {
+            try {
+              return JSON.parse(text.slice(start, end + 1));
+            } catch {
+              return null;
+            }
+          }
+          return null;
+        };
+        
+        let parsed = extractJSONArray(fullContent);
+        if (!parsed) {
+          // Try to extract as object with results array
+          const objMatch = fullContent.match(/\{[\s\S]*\}/);
+          if (objMatch) {
+            try {
+              const obj = JSON.parse(objMatch[0]);
+              parsed = Array.isArray(obj) ? obj : (obj.results || Object.values(obj)[0]);
+            } catch {
+              parsed = [];
+            }
+          } else {
+            parsed = [];
+          }
+        }
+        results = Array.isArray(parsed) ? parsed : [];
       }
 
       setAiOutputLines(prev => [...prev, '> Evaluating...']);
