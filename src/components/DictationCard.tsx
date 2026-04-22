@@ -120,6 +120,11 @@ export default function DictationCard({
             type="text"
             autoComplete="off"
             ref={englishInputRef}
+            autoCorrect="off"
+            autoCapitalize="none"
+            inputMode="text"
+            lang="en"
+            spellCheck={false}
             onKeyDown={handleKeyDown}
             value={userAnswers[currentIndex]?.english || ''}
             onChange={(e) => onEnglishChange(e.target.value)}
