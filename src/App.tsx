@@ -162,13 +162,17 @@ export default function App() {
       }
 
       let results: any[] = [];
-      const prompt = `Evaluate these English-to-Chinese translation answers. 
-        A user is being tested on vocabulary. 
-        Be flexible with synonyms (if it means the same thing, it's correct).
-        Be STRICT with part-of-speech errors (e.g., if standard is "世界" (noun) but user wrote "世界的" (adjective), mark WRONG).
-        Return a JSON array of objects. Format: [{"index": number, "isCorrect": boolean, "reason": "Chinese explanation"}]
-        
-        Data: ${JSON.stringify(payload)}`;
+      const prompt = `You are evaluating English-to-Chinese translation answers for a vocabulary test.
+
+Rules:
+- Be FLEXIBLE with synonyms and alternative meanings: an English word may have multiple valid meanings (e.g., "abroad" can mean "在国外" OR "在流传中"). If the user's translation matches ANY legitimate meaning of the English word — even if it differs from the standard answer — mark it CORRECT.
+- Use your own knowledge of the English word's full range of meanings to judge correctness, not just whether it matches the standard translation provided.
+- Be STRICT with part-of-speech errors (e.g., if the standard is "世界" (noun) but the user wrote "世界的" (adjective/attributive form), mark WRONG).
+- Minor character variations or alternate written forms of the same meaning should be marked CORRECT.
+
+Return a JSON array of objects. Format: [{"index": number, "isCorrect": boolean, "reason": "Chinese explanation"}]
+
+Data: ${JSON.stringify(payload)}`;
 
       if (aiConfig.provider === 'gemini') {
         setAiOutputLines(prev => [...prev, '> Using Gemini model...', '  Sending request...']);

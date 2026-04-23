@@ -66,10 +66,10 @@ export default function DictationCard({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    // if (e.key === 'Enter') {
-    //   e.preventDefault();
-    //   onNext();
-    // }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      onNext();
+    }
   };
 
   return (
@@ -138,7 +138,6 @@ export default function DictationCard({
             inputMode="text"
             lang="en"
             spellCheck={false}
-            onKeyDown={handleKeyDown}
             value={userAnswers[currentIndex]?.english || ''}
             onChange={(e) => onEnglishChange(e.target.value)}
             placeholder="Input..."
