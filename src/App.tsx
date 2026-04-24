@@ -12,6 +12,7 @@ import WordInputPanel from './components/WordInputPanel';
 import WelcomePanel from './components/WelcomePanel';
 import DictationCard from './components/DictationCard';
 import ContinuousMode from './components/ContinuousMode';
+import VoiceSelectorModal from './components/VoiceSelectorModal';
 
 import ResultsAudit from './components/ResultsAudit';
 import AISettingsModal from './components/AISettingsModal';
@@ -35,7 +36,18 @@ export default function App() {
   const [step, setStep] = useState<Step>(1);
   const [rawInput, setRawInput] = useState('');
   const [words, setWords] = useState<WordEntry[]>([]);
-  const [settings, setSettings] = useState<AppSettings>({ maxPlays: 2, voiceRate: 1.0, autoPlayFirst: true });
+  const [settings, setSettings] = useState<AppSettings>(() => {
+    const saved = localStorage.getItem('app-settings');
+    if (saved) {
+      try {
+        return { ...JSON.parse(saved), selectedVoice: JSON.parse(saved).selectedVoice || null };
+      } catch {
+        // fall through
+      }
+    }
+    return { maxPlays: 2, voiceRate: 1.0, autoPlayFirst: true, selectedVoice: null };
+  });
+  const [showVoiceSelector, setShowVoiceSelector] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAiSettings, setShowAiSettings] = useState(false);
   const [aiConfig, setAiConfig] = useState<AIConfig>({
@@ -395,17 +407,21 @@ Data: ${JSON.stringify(payload)}`;
     }
   }, [currentIndex, words.length, cancelSpeech, finalizeSession]);
 
-  const handleDebugAutofill = useCallback(() => {
-    setUserAnswers(prev => ({
-      ...prev,
-      [currentIndex]: { 
-        english: words[currentIndex].english, 
-        translation: words[currentIndex].translation 
-      }
-    }));
-  }, [currentIndex, words]);
+   const handleDebugAutofill = useCallback(() => {
+     setUserAnswers(prev => ({
+       ...prev,
+       [currentIndex]: { 
+         english: words[currentIndex].english, 
+         translation: words[currentIndex].translation 
+       }
+     }));
+   }, [currentIndex, words]);
 
-  // Continuous mode effect
+   const handleVoiceSelect = useCallback((voiceName: string | null) => {
+     setSettings(prev => ({ ...prev, selectedVoice: voiceName }));
+   }, []);
+
+   // Continuous mode effect
   useEffect(() => {
     let timeout: NodeJS.Timeout;
     if (step === 4 && isContinuousPlaying && currentIndex < words.length) {
@@ -452,6 +468,15 @@ Data: ${JSON.stringify(payload)}`;
     }
   }, []);
 
+  // Persist app settings to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('app-settings', JSON.stringify(settings));
+    } catch {
+      // ignore storage errors
+    }
+  }, [settings]);
+
   const handleContinuousToggle = useCallback(() => {
     setIsContinuousPlaying(prev => !prev);
   }, []);
@@ -484,15 +509,17 @@ Data: ${JSON.stringify(payload)}`;
               exit={{ opacity: 0 }}
               className="h-full grid grid-cols-1 md:grid-cols-12 gap-0"
             >
-              <WordInputPanel
-                rawInput={rawInput}
-                settings={settings}
-                onInputChange={setRawInput}
-                onClearInput={() => setRawInput('')}
-                onSettingsChange={setSettings}
-                onStartInteractive={handleStart}
-                onStartContinuous={handleStartContinuous}
-              />
+               <WordInputPanel
+                 rawInput={rawInput}
+                 settings={settings}
+                 onInputChange={setRawInput}
+                 onClearInput={() => setRawInput('')}
+                 onSettingsChange={setSettings}
+                 onStartInteractive={handleStart}
+                 onStartContinuous={handleStartContinuous}
+                 onOpenVoiceSelector={() => setShowVoiceSelector(true)}
+                 selectedVoice={settings.selectedVoice}
+               />
               <WelcomePanel />
             </motion.div>
           )}
@@ -574,12 +601,20 @@ Data: ${JSON.stringify(payload)}`;
         )}
       </AnimatePresence>
 
-      {/* AI Output Stream */}
-      <AIOutputStream
-        isOpen={showAiOutput}
-        outputs={aiOutputLines}
-        onClose={() => setShowAiOutput(false)}
-      />
-    </div>
-  );
-}
+       {/* AI Output Stream */}
+       <AIOutputStream
+         isOpen={showAiOutput}
+         outputs={aiOutputLines}
+         onClose={() => setShowAiOutput(false)}
+       />
+
+       {/* Voice Selector Modal */}
+       <VoiceSelectorModal
+         isOpen={showVoiceSelector}
+         selectedVoice={settings.selectedVoice}
+         onSelect={handleVoiceSelect}
+         onClose={() => setShowVoiceSelector(false)}
+       />
+     </div>
+   );
+ }

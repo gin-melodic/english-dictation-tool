@@ -5,30 +5,25 @@ import { AppSettings } from '../types';
 // Voice selection helpers
 // ---------------------------------------------------------------------------
 
+// Cached best auto voice (shared across hook instances)
+let cachedBestVoice: SpeechSynthesisVoice | null = null;
+
+/** Clear the auto-voice cache (e.g. when system voices change). */
+function clearVoiceCache() {
+  cachedBestVoice = null;
+}
+
 /**
- * Score a voice candidate for single-word English dictation quality.
- * Higher score = more preferred.
- *
- * Factors (descending priority):
- *  1. Neural/enhanced voices produce the cleanest articulation per word.
- *  2. en-US locale is required; other English variants are acceptable fallback.
- *  3. Local (on-device) voices have lower latency and fewer network artefacts.
- *  4. Specific high-quality voice names known to produce clear output.
+ * Score a voice candidate; higher = more preferred.
  */
 function scoreVoice(voice: SpeechSynthesisVoice): number {
   const lang = voice.lang.toLowerCase().replace('_', '-');
   const name = voice.name.toLowerCase();
 
   if (!lang.startsWith('en')) return -1;
-
   let score = 0;
 
-  // ── Tier 1: Audio quality keywords ────────────────────────────────────
-  const isExplicitlyNeural =
-    name.includes('neural')        ||
-    name.includes('premium')       ||
-    name.includes('enhanced')      ||
-    name.includes('online (natural)');
+  const isNeural = name.includes('neural') || name.includes('premium') || name.includes('enhanced') || name.includes('online (natural)');
 
   if (name.includes('neural'))           score += 50;
   if (name.includes('premium'))          score += 40;
@@ -36,54 +31,35 @@ function scoreVoice(voice: SpeechSynthesisVoice): number {
   if (name.includes('online (natural)')) score += 30;
   else if (name.includes('natural'))     score += 15;
 
-  // ── Tier 2: Locale ─────────────────────────────────────────────────────
   if (lang === 'en-us')                  score += 20;
   else if (lang.startsWith('en'))        score += 10;
 
-  // ── Tier 3: Cloud/local signal ────────────────────────────────────────
   if (!voice.localService) {
-    if (isExplicitlyNeural) {
-      // Cloud + confirmed neural: small bonus for network freshness
-      // (model updates don't require OS updates)
-      score += 10;
-    } else {
-      // Cloud without quality signal: cautious bonus
-      // Covers Google/MS voices that omit quality keywords in their name
-      score += 18;
-    }
+    score += isNeural ? 10 : 18;
   } else {
-    // On-device: latency advantage, but no quality premium unless name confirms it
     score += 5;
   }
 
-  // ── Tier 4: Known high-quality names ──────────────────────────────────
-  if (name.includes('samantha'))              score += 18;
-  if (name.includes('ava'))                   score += 18;
-  if (name.includes('alex'))                  score += 12;
-  if (name.includes('daniel'))                score += 16;
-  if (name.includes('karen'))                 score += 14;
-  if (name.includes('microsoft aria'))        score += 22;
-  if (name.includes('microsoft jenny'))       score += 22;
-  if (name.includes('microsoft guy'))         score += 20;
+  if (name.includes('samantha'))         score += 18;
+  if (name.includes('ava'))              score += 18;
+  if (name.includes('alex'))             score += 12;
+  if (name.includes('daniel'))           score += 16;
+  if (name.includes('karen'))            score += 14;
+  if (name.includes('microsoft aria'))   score += 22;
+  if (name.includes('microsoft jenny'))  score += 22;
+  if (name.includes('microsoft guy'))    score += 20;
   if (name.includes('google') && lang === 'en-us') score += 18;
 
-  // ── Penalties ──────────────────────────────────────────────────────────
-  if (name.includes('compact'))              score -= 15;
-  if (name.includes('espeak'))               score -= 30;
-  if (name.includes('mbrola'))               score -= 30;
+  if (name.includes('compact'))          score -= 15;
+  if (name.includes('espeak'))           score -= 30;
+  if (name.includes('mbrola'))           score -= 30;
 
   return score;
 }
 
-/**
- * Module-level cache so voice selection is computed once per browser session
- * rather than on every speak() call.
- */
-let cachedVoice: SpeechSynthesisVoice | null = null;
-
-/** Return the highest-scoring available voice, or null if none qualify. */
+/** Return highest-scoring English voice, or null if none qualify. */
 function getBestVoice(synth: SpeechSynthesis): SpeechSynthesisVoice | null {
-  if (cachedVoice) return cachedVoice;
+  if (cachedBestVoice) return cachedBestVoice;
 
   const voices = synth.getVoices();
   if (!voices.length) return null;
@@ -91,21 +67,39 @@ function getBestVoice(synth: SpeechSynthesis): SpeechSynthesisVoice | null {
   let best: SpeechSynthesisVoice | null = null;
   let bestScore = -Infinity;
 
+  // Original behavior: only consider en-US voices for auto selection
   for (const v of voices) {
     if (!v.lang.toLowerCase().startsWith('en-us')) {
       continue;
     }
     const s = scoreVoice(v);
-    console.info(`[useSpeechSynthesis] Voice candidate: "${v.name}" (${v.lang}) — score: ${s}`);
     if (s > bestScore) {
       bestScore = s;
       best = v;
     }
   }
-  console.info(`[useSpeechSynthesis] Selected voice: "${best?.name}" (${best?.lang}) — score: ${bestScore}`);
 
-  if (best && bestScore >= 0) cachedVoice = best;
+  if (best && bestScore >= 0) {
+    cachedBestVoice = best;
+    return best;
+  }
   return best;
+}
+
+/** Find a voice by exact name. */
+function getVoiceByName(synth: SpeechSynthesis, name: string): SpeechSynthesisVoice | null {
+  return synth.getVoices().find(v => v.name === name) || null;
+}
+
+/** Resolve the effective voice to use: selected overrides auto, with fallback. */
+function getEffectiveVoice(synth: SpeechSynthesis, selectedVoice: string | null): SpeechSynthesisVoice | null {
+  if (selectedVoice) {
+    const found = getVoiceByName(synth, selectedVoice);
+    if (found) return found;
+    // Selected voice not available: fall back to auto best
+    return getBestVoice(synth);
+  }
+  return getBestVoice(synth);
 }
 
 // ---------------------------------------------------------------------------
@@ -116,40 +110,30 @@ export function useSpeechSynthesis(settings: AppSettings) {
   const synthRef = useRef<SpeechSynthesis | null>(null);
 
   /**
-   * Pending debounce timer — collapses rapid successive speak() calls
-   * (e.g. React StrictMode double-invoke, fast button taps) into a single
-   * utterance, preventing syllable-chopping from queued overlapping speech.
+   * Pending debounce timer
    */
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /**
-   * Chrome keep-alive interval.
-   * Chrome silently stops audio for utterances longer than ~15 s while
-   * keeping speechSynthesis.speaking === true. Calling pause()/resume()
-   * every 10 s resets that internal counter. For single-word dictation this
-   * rarely fires, but we keep it in case the caller ever passes a phrase.
+   * Chrome keep-alive interval
    */
   const keepAliveRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // -------------------------------------------------------------------------
-  // Mount: initialise engine and pre-warm the voice cache
+  // Mount: initialise engine
   // -------------------------------------------------------------------------
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const synth = window.speechSynthesis;
     synthRef.current = synth;
-
-    // Flush stale utterances left over from HMR / previous render cycles
     synth.cancel();
 
-    /**
-     * Voices load asynchronously on Chrome desktop and some Android WebViews.
-     * Pre-warm the cache as soon as they become available so the first
-     * speak() call does not stall waiting for getVoices() to populate.
-     */
-    const prewarmVoices = () => getBestVoice(synth);
-    prewarmVoices(); // synchronous attempt (works on Safari / Firefox)
+    const prewarmVoices = () => {
+      clearVoiceCache();
+      getBestVoice(synth);
+    };
+    prewarmVoices();
     synth.addEventListener('voiceschanged', prewarmVoices);
 
     keepAliveRef.current = setInterval(() => {
@@ -164,9 +148,7 @@ export function useSpeechSynthesis(settings: AppSettings) {
       synth.cancel();
       if (timerRef.current)    clearTimeout(timerRef.current);
       if (keepAliveRef.current) clearInterval(keepAliveRef.current);
-      // Invalidate the module-level cache on unmount so a fresh voice list is
-      // re-evaluated if the hook remounts (Strict Mode, route changes, etc.)
-      cachedVoice = null;
+      clearVoiceCache();
     };
   }, []);
 
@@ -178,59 +160,38 @@ export function useSpeechSynthesis(settings: AppSettings) {
       const synth = synthRef.current;
       if (!synth) return;
 
-      // Cancel any pending debounce timer before scheduling a new one
       if (timerRef.current) {
         clearTimeout(timerRef.current);
         timerRef.current = null;
       }
 
-      // Trigger cancel() before the setTimeout so it has a full event-loop
-      // tick to flush the queue — cancel() is asynchronous under the hood.
       synth.cancel();
 
       timerRef.current = setTimeout(() => {
         timerRef.current = null;
 
-        // Second safety cancel in case the engine is still draining (rare,
-        // but possible under heavy system load or on slower Android devices)
         if (synth.speaking || synth.pending) {
           synth.cancel();
         }
 
         const utterance = new SpeechSynthesisUtterance(text);
-
-        // --- Locale & voice -------------------------------------------------
         utterance.lang = 'en-US';
 
-        const voice = getBestVoice(synth);
+        const voice = getEffectiveVoice(synth, settings.selectedVoice);
         if (voice) utterance.voice = voice;
 
-        // --- Prosody tuning for single words --------------------------------
-        // Some TTS engines pitch-shift short words upward, making them sound
-        // clipped. A slight downward pitch correction normalises this.
         utterance.pitch = 0.95;
-
-        // Rate: clamp to [0.7, 1.2] — outside this range artefacts increase.
         utterance.rate = Math.min(1.2, Math.max(0.7, settings.voiceRate ?? 1.0));
-
-        // Maximum volume prevents words sounding "swallowed" on mobile.
         utterance.volume = 1.0;
 
-        // --- onstart: detect and handle voice-not-ready race on Android -----
-        // Record when the engine actually begins playing audio. Used by onend.
         let startedAt = 0;
         utterance.onstart = () => { startedAt = Date.now(); };
 
-        // --- onend: detect silent-hang (Android WebView bug) ----------------
-        // On some Android WebViews the utterance fires onend immediately
-        // without producing audio. We detect this via elapsed-time heuristic.
         utterance.onend = () => {
           const elapsed = Date.now() - startedAt;
-          // A real single-word utterance takes at least ~200 ms. If it
-          // "finishes" in under 80 ms it almost certainly played silently.
           if (startedAt > 0 && elapsed < 80) {
             console.warn('[useSpeechSynthesis] Silent utterance detected — retrying with fallback voice.');
-            cachedVoice = null; // invalidate so a different voice is selected
+            clearVoiceCache(); // force new auto-selection
             const retry = new SpeechSynthesisUtterance(text);
             retry.lang   = 'en-US';
             retry.rate   = utterance.rate;
@@ -241,21 +202,17 @@ export function useSpeechSynthesis(settings: AppSettings) {
           }
         };
 
-        // --- Error handler --------------------------------------------------
         utterance.onerror = (e) => {
-          // 'canceled' and 'interrupted' are expected when cancel() is called
-          // programmatically — they are not real errors, safe to ignore.
           if (e.error === 'canceled' || e.error === 'interrupted') return;
-
           console.error('[useSpeechSynthesis] TTS error:', e.error);
-          synth.cancel(); // reset engine state
-          cachedVoice = null; // invalidate in case the error is voice-specific
+          synth.cancel();
+          clearVoiceCache();
         };
 
         synth.speak(utterance);
-      }, 150); // 150 ms: enough time for cancel() to flush, short enough to feel instant
+      }, 150);
     },
-    [settings.voiceRate],
+    [settings.voiceRate, settings.selectedVoice],
   );
 
   // -------------------------------------------------------------------------

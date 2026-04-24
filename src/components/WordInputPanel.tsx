@@ -1,4 +1,4 @@
-import { Trash2, Play } from 'lucide-react';
+import { Trash2, Play, Volume2 } from 'lucide-react';
 import { AppSettings } from '../types';
 
 interface WordInputPanelProps {
@@ -9,6 +9,8 @@ interface WordInputPanelProps {
   onSettingsChange: (settings: AppSettings) => void;
   onStartInteractive: () => void;
   onStartContinuous: () => void;
+  onOpenVoiceSelector: () => void;
+  selectedVoice: string | null;
 }
 
 export default function WordInputPanel({
@@ -18,7 +20,9 @@ export default function WordInputPanel({
   onClearInput,
   onSettingsChange,
   onStartInteractive,
-  onStartContinuous
+  onStartContinuous,
+  onOpenVoiceSelector,
+  selectedVoice
 }: WordInputPanelProps) {
   const lineCount = rawInput.split('\n').filter(l => l.trim()).length;
 
@@ -89,24 +93,41 @@ export default function WordInputPanel({
             </div>
           </div>
 
-          <div className="flex justify-between items-center">
-            <label className="text-[10px] md:text-xs font-black uppercase tracking-tight">Auto-play First</label>
-            <button
-              onClick={() => onSettingsChange({ ...settings, autoPlayFirst: !settings.autoPlayFirst })}
-              className={`w-12 h-6 md:w-14 md:h-7 border-2 border-black flex items-center justify-center transition-colors relative ${
-                settings.autoPlayFirst ? 'bg-black' : 'bg-transparent'
-              }`}
-            >
-              <span
-                className={`w-4 h-4 md:w-5 md:h-5 bg-white border-2 border-black block transition-transform ${
-                  settings.autoPlayFirst ? 'translate-x-4 md:translate-x-3' : 'translate-x-0'
-                }`}
-              />
-            </button>
-          </div>
-        </div>
+           <div className="flex justify-between items-center">
+             <label className="text-[10px] md:text-xs font-black uppercase tracking-tight">Auto-play First</label>
+             <button
+               onClick={() => onSettingsChange({ ...settings, autoPlayFirst: !settings.autoPlayFirst })}
+               className={`w-12 h-6 md:w-14 md:h-7 border-2 border-black flex items-center justify-center transition-colors relative ${
+                 settings.autoPlayFirst ? 'bg-black' : 'bg-transparent'
+               }`}
+             >
+               <span
+                 className={`w-4 h-4 md:w-5 md:h-5 bg-white border-2 border-black block transition-transform ${
+                   settings.autoPlayFirst ? 'translate-x-4 md:translate-x-3' : 'translate-x-0'
+                 }`}
+               />
+             </button>
+           </div>
+         </div>
 
-        <div className="flex flex-col gap-2 md:gap-3">
+         {/* Voice Selection */}
+         <div className="space-y-2 md:space-y-3 pt-2 md:pt-3 border-t border-gray-100">
+           <div className="flex justify-between items-center">
+             <label className="text-[10px] md:text-xs font-black uppercase tracking-tight">TTS Voice</label>
+             <button
+               onClick={onOpenVoiceSelector}
+               className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1 md:py-1.5 border-2 border-black hover:bg-black hover:text-white transition-colors text-[8px] md:text-[9px] font-black uppercase tracking-wider min-w-[80px] md:min-w-[100px] justify-end touch-manipulation"
+             >
+               <Volume2 className="w-3 h-3 md:w-3.5 md:h-3.5" />
+               <span className="truncate max-w-[60px] md:max-w-[80px]">
+                 {selectedVoice ? selectedVoice.split(' ')[0] : 'Auto'}
+               </span>
+               <span className="text-[7px] md:text-[8px] opacity-60">▼</span>
+             </button>
+           </div>
+         </div>
+
+         <div className="flex flex-col gap-2 md:gap-3">
           <button
             onClick={onStartInteractive}
             disabled={!rawInput.trim()}

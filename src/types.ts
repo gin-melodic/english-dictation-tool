@@ -18,6 +18,7 @@ export interface AppSettings {
   maxPlays: number;
   voiceRate: number;
   autoPlayFirst: boolean;
+  selectedVoice: string | null; // voice name or null for auto
 }
 
 export interface AIConfig {
