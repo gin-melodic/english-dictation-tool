@@ -583,6 +583,9 @@ Data: ${JSON.stringify(payload)}`;
                 sessionSource={sessionSource}
                 onReset={handleReset}
                 onBackToIntegrity={() => setStep(2)}
+                settings={settings}
+                onOpenVoiceSelector={() => setShowVoiceSelector(true)}
+                selectedVoice={settings.selectedVoice}
               />
             </motion.div>
           )}

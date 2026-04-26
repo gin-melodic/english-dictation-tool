@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import { Sparkles, CheckCircle2, XCircle, Volume2, Undo2 } from 'lucide-react';
-import { WordEntry, SessionSource, AIVerdict } from '../types';
+import { WordEntry, SessionSource, AIVerdict, AppSettings } from '../types';
+import { useSpeechSynthesis } from '../hooks/useSpeechSynthesis';
 
 interface ResultsAuditProps {
   words: WordEntry[];
@@ -11,6 +12,9 @@ interface ResultsAuditProps {
   sessionSource: SessionSource;
   onReset: () => void;
   onBackToIntegrity?: () => void;
+  settings: AppSettings;
+  onOpenVoiceSelector: () => void;
+  selectedVoice: string | null;
 }
 
 export default function ResultsAudit({
@@ -21,9 +25,13 @@ export default function ResultsAudit({
   isEvaluating,
   sessionSource,
   onReset,
-  onBackToIntegrity
+  onBackToIntegrity,
+  settings,
+  onOpenVoiceSelector,
+  selectedVoice
 }: ResultsAuditProps) {
   const isContinuous = sessionSource === 'continuous';
+  const { speak } = useSpeechSynthesis(settings);
 
   if (isEvaluating) {
     return (
@@ -64,6 +72,17 @@ export default function ResultsAudit({
                 <Undo2 className="w-3 h-3 md:w-4 md:h-4" /> Back to Audit
               </button>
             )}
+
+            <button
+              onClick={onOpenVoiceSelector}
+              className="flex items-center gap-1 md:gap-2 px-3 md:px-6 py-2 md:py-4 border-2 md:border-4 border-black hover:bg-black hover:text-white transition-colors text-xs md:text-sm font-black uppercase tracking-widest touch-manipulation"
+            >
+              <Volume2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
+              <span className="truncate max-w-[80px] md:max-w-[120px]">
+                {selectedVoice ? selectedVoice.split(' ')[0] : 'Auto'}
+              </span>
+              <span className="text-[10px] md:text-xs opacity-60">▼</span>
+            </button>
             <button
               onClick={onReset}
               className="bg-black text-white px-4 md:px-8 py-2 md:py-4 font-black uppercase tracking-widest hover:bg-gray-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] md:shadow-[8px_8px_0px_0px_rgba(0,0,0,0.2)] text-xs md:text-sm"
@@ -120,14 +139,7 @@ export default function ResultsAudit({
                     <div className="flex items-center gap-2 md:gap-3">
                       <div className="text-lg md:text-2xl font-black lowercase tracking-tight">{word.english.toLowerCase()}</div>
                       <button
-                        onClick={() => {
-                          if (typeof window !== 'undefined' && window.speechSynthesis) {
-                            window.speechSynthesis.cancel();
-                            const utterance = new SpeechSynthesisUtterance(word.english);
-                            utterance.lang = 'en-US';
-                            window.speechSynthesis.speak(utterance);
-                          }
-                        }}
+                        onClick={() => speak(word.english)}
                         className="p-1 hover:bg-black/5 rounded transition-colors touch-manipulation"
                         title="Play audio"
                       >
