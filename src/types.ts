@@ -22,7 +22,7 @@ export interface AppSettings {
 }
 
 export interface AIConfig {
-  provider: 'gemini' | 'openrouter';
+  provider: 'gemini' | 'openrouter' | 'nvidia';
   apiKey: string;
   modelId: string;
 }

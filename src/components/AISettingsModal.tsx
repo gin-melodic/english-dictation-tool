@@ -76,8 +76,8 @@ export default function AISettingsModal({
           <div className="space-y-4 md:space-y-6">
             <div className="space-y-2 md:space-y-3">
               <label className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-gray-500">Service Provider</label>
-              <div className="grid grid-cols-2 gap-2 md:gap-4">
-                {(['gemini', 'openrouter'] as const).map(p => (
+              <div className="grid grid-cols-3 gap-2 md:gap-4">
+                {(['gemini', 'openrouter', 'nvidia'] as const).map(p => (
                   <button
                     key={p}
                     onClick={() => setConfig(prev => ({ ...prev, provider: p }))}
@@ -107,14 +107,16 @@ export default function AISettingsModal({
               </div>
             </div>
 
-            {config.provider === 'openrouter' && (
+            {(config.provider === 'openrouter' || config.provider === 'nvidia') && (
               <div className="space-y-2 md:space-y-3">
-                <label className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-gray-500">OpenRouter Model ID</label>
+                <label className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-gray-500">
+                  {config.provider === 'nvidia' ? 'NVIDIA Model ID' : 'OpenRouter Model ID'}
+                </label>
                 <input
                   type="text"
                   value={config.modelId}
                   onChange={(e) => setConfig(prev => ({ ...prev, modelId: e.target.value }))}
-                  placeholder="e.g. openai/gpt-oss-120b:free"
+                  placeholder={config.provider === 'nvidia' ? 'e.g. nvidia/llama-3.1-nemotron-ultra-253b-v1' : 'e.g. openai/gpt-oss-120b:free'}
                   className="w-full bg-gray-50 border-2 border-black p-3 md:p-4 font-mono text-xs md:text-sm outline-none focus:bg-white transition-all"
                 />
               </div>

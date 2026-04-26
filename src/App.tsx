@@ -21,14 +21,14 @@ import AIOutputStream from './components/AIOutputStream';
 import { useSpeechSynthesis } from './hooks/useSpeechSynthesis';
 import { parseInput, shuffleArray } from './utils/helpers';
 
-import type { 
-  WordEntry, 
-  AppSettings, 
-  AIConfig, 
-  AIVerdict, 
-  Step, 
-  SessionSource, 
-  SessionManifestItem 
+import type {
+  WordEntry,
+  AppSettings,
+  AIConfig,
+  AIVerdict,
+  Step,
+  SessionSource,
+  SessionManifestItem
 } from './types';
 
 export default function App() {
@@ -74,9 +74,9 @@ export default function App() {
   const handleStart = useCallback(() => {
     const parsed = parseInput(rawInput);
     if (parsed.length === 0) return;
-    
+
     const shuffled = shuffleArray(parsed);
-    
+
     console.log('[System] Session Started. Word Count:', shuffled.length);
     setSessionSource('interactive');
     setWords(shuffled);
@@ -189,7 +189,7 @@ Data: ${JSON.stringify(payload)}`;
       if (aiConfig.provider === 'gemini') {
         setAiOutputLines(prev => [...prev, '> Using Gemini model...', '  Sending request...']);
         const ai = new GoogleGenAI({ apiKey: aiConfig.apiKey });
-        
+
         const stream = await ai.models.generateContentStream({
           model: "gemini-3-flash-preview",
           contents: prompt,
@@ -209,7 +209,7 @@ Data: ${JSON.stringify(payload)}`;
             }
           }
         });
-        
+
         let fullText = '';
         let dots = 0;
         for await (const chunk of stream) {
@@ -225,7 +225,7 @@ Data: ${JSON.stringify(payload)}`;
             });
           }
         }
-        
+
         setAiOutputLines(prev => [...prev, '', '> Parsing complete']);
         // Clean up content and handle partial JSON
         const cleanText = fullText.trim().replace(/^[^{[]*|[^}\]]*$/g, '');
@@ -245,38 +245,50 @@ Data: ${JSON.stringify(payload)}`;
           }
         }
       } else {
-        setAiOutputLines(prev => [...prev, `> Using OpenRouter: ${aiConfig.modelId}`, '  Sending request...']);
-        
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        const isNvidia = aiConfig.provider === 'nvidia';
+        const baseUrl = isNvidia
+          ? '/nvidia-api/v1/chat/completions'
+          : 'https://openrouter.ai/api/v1/chat/completions';
+        const defaultModel = isNvidia
+          ? 'deepseek-ai/deepseek-v4-pro'
+          : 'openai/gpt-oss-120b:free';
+        const providerLabel = isNvidia ? 'NVIDIA' : 'OpenRouter';
+
+        setAiOutputLines(prev => [...prev, `> Using ${providerLabel}: ${aiConfig.modelId || defaultModel}`, '  Sending request...']);
+
+        const response = await fetch(baseUrl, {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${aiConfig.apiKey}`,
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            "model": aiConfig.modelId || "openai/gpt-oss-120b:free",
+            "model": aiConfig.modelId || defaultModel,
             "messages": [{ "role": "user", "content": prompt }],
             "response_format": { "type": "json_object" },
-            "stream": true
+            "stream": true,
+            "temperature": 0.3,
+            "top_p": 0.95,
+            "extra_body": { "chat_template_kwargs": { "thinking": false } }
           })
         });
-        
+
         setAiOutputLines(prev => [...prev, '  Waiting for response...']);
         const reader = response.body?.getReader();
         const decoder = new TextDecoder();
         let fullContent = '';
-        
+
         if (reader) {
           let dots = 0;
           let buffer = '';
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
-            
+
             buffer += decoder.decode(value, { stream: true });
             const lines = buffer.split('\n');
             buffer = lines.pop() || '';
-            
+
             for (const line of lines) {
               if (line.startsWith('data: ')) {
                 const data = line.slice(6).trim();
@@ -301,18 +313,18 @@ Data: ${JSON.stringify(payload)}`;
             }
           }
         }
-        
+
         setAiOutputLines(prev => [...prev, '', '> Parsing complete']);
         // Extract valid JSON array from the response
         const extractJSONArray = (text: string): any[] | null => {
           // Find the first '[' and match it with the corresponding ']'
           const startMatch = text.match(/\[[\s\S]*/);
           if (!startMatch) return null;
-          
+
           let start = startMatch.index || 0;
           let bracketCount = 0;
           let end = -1;
-          
+
           for (let i = start; i < text.length; i++) {
             if (text[i] === '[') bracketCount++;
             else if (text[i] === ']') {
@@ -323,7 +335,7 @@ Data: ${JSON.stringify(payload)}`;
               }
             }
           }
-          
+
           if (end !== -1) {
             try {
               return JSON.parse(text.slice(start, end + 1));
@@ -333,7 +345,7 @@ Data: ${JSON.stringify(payload)}`;
           }
           return null;
         };
-        
+
         let parsed = extractJSONArray(fullContent);
         if (!parsed) {
           // Try to extract as object with results array
@@ -363,10 +375,10 @@ Data: ${JSON.stringify(payload)}`;
       results.forEach((res: any) => {
         verdictMap[res.index] = { isCorrect: res.isCorrect, reason: res.reason };
       });
-      
+
       setAiOutputLines(prev => [...prev, '', `> Evaluation complete - ${results.length} items processed`]);
       setAiVerdicts(verdictMap);
-      
+
       setTimeout(() => {
         setShowAiOutput(false);
         setAiOutputLines([]);
@@ -407,21 +419,21 @@ Data: ${JSON.stringify(payload)}`;
     }
   }, [currentIndex, words.length, cancelSpeech, finalizeSession]);
 
-   const handleDebugAutofill = useCallback(() => {
-     setUserAnswers(prev => ({
-       ...prev,
-       [currentIndex]: { 
-         english: words[currentIndex].english, 
-         translation: words[currentIndex].translation 
-       }
-     }));
-   }, [currentIndex, words]);
+  const handleDebugAutofill = useCallback(() => {
+    setUserAnswers(prev => ({
+      ...prev,
+      [currentIndex]: {
+        english: words[currentIndex].english,
+        translation: words[currentIndex].translation
+      }
+    }));
+  }, [currentIndex, words]);
 
-   const handleVoiceSelect = useCallback((voiceName: string | null) => {
-     setSettings(prev => ({ ...prev, selectedVoice: voiceName }));
-   }, []);
+  const handleVoiceSelect = useCallback((voiceName: string | null) => {
+    setSettings(prev => ({ ...prev, selectedVoice: voiceName }));
+  }, []);
 
-   // Continuous mode effect
+  // Continuous mode effect
   useEffect(() => {
     let timeout: NodeJS.Timeout;
     if (step === 4 && isContinuousPlaying && currentIndex < words.length) {
@@ -502,30 +514,30 @@ Data: ${JSON.stringify(payload)}`;
       <main className="flex-1 overflow-hidden">
         <AnimatePresence mode="wait">
           {step === 1 && (
-            <motion.div 
+            <motion.div
               key="step1"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="h-full grid grid-cols-1 md:grid-cols-12 gap-0"
             >
-               <WordInputPanel
-                 rawInput={rawInput}
-                 settings={settings}
-                 onInputChange={setRawInput}
-                 onClearInput={() => setRawInput('')}
-                 onSettingsChange={setSettings}
-                 onStartInteractive={handleStart}
-                 onStartContinuous={handleStartContinuous}
-                 onOpenVoiceSelector={() => setShowVoiceSelector(true)}
-                 selectedVoice={settings.selectedVoice}
-               />
+              <WordInputPanel
+                rawInput={rawInput}
+                settings={settings}
+                onInputChange={setRawInput}
+                onClearInput={() => setRawInput('')}
+                onSettingsChange={setSettings}
+                onStartInteractive={handleStart}
+                onStartContinuous={handleStartContinuous}
+                onOpenVoiceSelector={() => setShowVoiceSelector(true)}
+                selectedVoice={settings.selectedVoice}
+              />
               <WelcomePanel />
             </motion.div>
           )}
 
           {step === 2 && (
-            <motion.div 
+            <motion.div
               key="step2"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -549,7 +561,7 @@ Data: ${JSON.stringify(payload)}`;
           )}
 
           {step === 4 && (
-            <motion.div 
+            <motion.div
               key="step4"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -569,7 +581,7 @@ Data: ${JSON.stringify(payload)}`;
           )}
 
           {step === 3 && (
-            <motion.div 
+            <motion.div
               key="step3"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -604,20 +616,20 @@ Data: ${JSON.stringify(payload)}`;
         )}
       </AnimatePresence>
 
-       {/* AI Output Stream */}
-       <AIOutputStream
-         isOpen={showAiOutput}
-         outputs={aiOutputLines}
-         onClose={() => setShowAiOutput(false)}
-       />
+      {/* AI Output Stream */}
+      <AIOutputStream
+        isOpen={showAiOutput}
+        outputs={aiOutputLines}
+        onClose={() => setShowAiOutput(false)}
+      />
 
-       {/* Voice Selector Modal */}
-       <VoiceSelectorModal
-         isOpen={showVoiceSelector}
-         selectedVoice={settings.selectedVoice}
-         onSelect={handleVoiceSelect}
-         onClose={() => setShowVoiceSelector(false)}
-       />
-     </div>
-   );
- }
+      {/* Voice Selector Modal */}
+      <VoiceSelectorModal
+        isOpen={showVoiceSelector}
+        selectedVoice={settings.selectedVoice}
+        onSelect={handleVoiceSelect}
+        onClose={() => setShowVoiceSelector(false)}
+      />
+    </div>
+  );
+}
