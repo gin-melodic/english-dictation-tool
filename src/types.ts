@@ -19,6 +19,7 @@ export interface AppSettings {
   voiceRate: number;
   autoPlayFirst: boolean;
   selectedVoice: string | null; // voice name or null for auto
+  shuffleMode: boolean;
 }
 
 export interface AIConfig {

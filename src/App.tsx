@@ -41,12 +41,17 @@ export default function App() {
     const saved = localStorage.getItem('app-settings');
     if (saved) {
       try {
-        return { ...JSON.parse(saved), selectedVoice: JSON.parse(saved).selectedVoice || null };
+        const parsed = JSON.parse(saved);
+        return { 
+          ...parsed, 
+          selectedVoice: parsed.selectedVoice || null,
+          shuffleMode: parsed.shuffleMode ?? true
+        };
       } catch {
         // fall through
       }
     }
-    return { maxPlays: 2, voiceRate: 1.0, autoPlayFirst: true, selectedVoice: null };
+    return { maxPlays: 2, voiceRate: 1.0, autoPlayFirst: true, selectedVoice: null, shuffleMode: true };
   });
   const [showVoiceSelector, setShowVoiceSelector] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -77,32 +82,32 @@ export default function App() {
     const parsed = parseInput(rawInput);
     if (parsed.length === 0) return;
 
-    const shuffled = shuffleArray(parsed);
+    const wordsList = settings.shuffleMode ? shuffleArray(parsed) : parsed;
 
-    console.log('[System] Session Started. Word Count:', shuffled.length);
+    console.log('[System] Session Started. Word Count:', wordsList.length);
     setSessionSource('interactive');
-    setWords(shuffled);
-    setSessionManifest(shuffled.map((w, idx) => ({ index: idx, word: w.english })));
+    setWords(wordsList);
+    setSessionManifest(wordsList.map((w, idx) => ({ index: idx, word: w.english })));
     setStep(2);
     setCurrentIndex(0);
     setPlayCounts({});
     setUserAnswers({});
     setSkippedIndices(new Set());
-  }, [rawInput]);
+  }, [rawInput, settings.shuffleMode]);
 
   const handleStartContinuous = useCallback(() => {
     const parsed = parseInput(rawInput);
     if (parsed.length === 0) return;
 
-    const shuffled = shuffleArray(parsed);
+    const wordsList = settings.shuffleMode ? shuffleArray(parsed) : parsed;
 
     setSessionSource('continuous');
-    setWords(shuffled);
+    setWords(wordsList);
     setStep(4);
     setCurrentIndex(0);
     setContinuousRepeat(0);
     setIsContinuousPlaying(settings.autoPlayFirst);
-  }, [rawInput, settings.autoPlayFirst]);
+  }, [rawInput, settings.shuffleMode, settings.autoPlayFirst]);
 
   const handleAbort = useCallback(() => {
     cancelSpeech();

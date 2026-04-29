@@ -108,6 +108,22 @@ export default function WordInputPanel({
                />
              </button>
            </div>
+
+           <div className="flex justify-between items-center">
+             <label className="text-[10px] md:text-xs font-black uppercase tracking-tight">Shuffle Words</label>
+             <button
+               onClick={() => onSettingsChange({ ...settings, shuffleMode: !settings.shuffleMode })}
+               className={`w-12 h-6 md:w-14 md:h-7 border-2 border-black flex items-center justify-center transition-colors relative ${
+                 settings.shuffleMode ? 'bg-black' : 'bg-transparent'
+               }`}
+             >
+               <span
+                 className={`w-4 h-4 md:w-5 md:h-5 bg-white border-2 border-black block transition-transform ${
+                   settings.shuffleMode ? 'translate-x-4 md:translate-x-3' : 'translate-x-0'
+                 }`}
+               />
+             </button>
+           </div>
          </div>
 
          {/* Voice Selection */}
