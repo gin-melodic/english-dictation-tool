@@ -5,17 +5,18 @@ import { X, Brain } from 'lucide-react';
 interface AIOutputStreamProps {
   isOpen: boolean;
   outputs: string[];
+  streamingText?: string;
   onClose: () => void;
 }
 
-export default function AIOutputStream({ isOpen, outputs, onClose }: AIOutputStreamProps) {
+export default function AIOutputStream({ isOpen, outputs, streamingText, onClose }: AIOutputStreamProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [outputs]);
+  }, [outputs, streamingText]);
 
   const isProcessing = outputs.length > 0 && !outputs[outputs.length - 1]?.includes('Done');
 
@@ -83,7 +84,19 @@ export default function AIOutputStream({ isOpen, outputs, onClose }: AIOutputStr
                   </div>
                 ))
               )}
-              {isProcessing && (
+              {/* Show streaming text content in real-time */}
+              {streamingText && (
+                <div className="mt-2 pt-2 border-t border-black/5">
+                  <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                    Raw Stream
+                  </div>
+                  <pre className="text-[10px] md:text-xs text-gray-600 whitespace-pre-wrap break-all max-h-[120px] overflow-y-auto">
+                    {streamingText}
+                    <span className="inline-block w-[2px] h-[1em] bg-black animate-pulse ml-[1px] align-middle" />
+                  </pre>
+                </div>
+              )}
+              {isProcessing && !streamingText && (
                 <div className="text-black/50 mt-2">
                   ▌
                 </div>

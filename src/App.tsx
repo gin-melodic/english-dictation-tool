@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { flushSync } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI, Type } from "@google/genai";
 
@@ -66,6 +67,7 @@ export default function App() {
   const [sessionManifest, setSessionManifest] = useState<SessionManifestItem[]>([]);
   const [showAiOutput, setShowAiOutput] = useState(false);
   const [aiOutputLines, setAiOutputLines] = useState<string[]>([]);
+  const [aiStreamingText, setAiStreamingText] = useState('');
 
   // Hooks
   const { speak, cancel: cancelSpeech } = useSpeechSynthesis(settings);
@@ -187,7 +189,7 @@ Return a JSON array of objects. Format: [{"index": number, "isCorrect": boolean,
 Data: ${JSON.stringify(payload)}`;
 
       if (aiConfig.provider === 'gemini') {
-        setAiOutputLines(prev => [...prev, '> Using Gemini model...', '  Sending request...']);
+        flushSync(() => setAiOutputLines(prev => [...prev, '> Using Gemini model...', '  Sending request...']));
         const ai = new GoogleGenAI({ apiKey: aiConfig.apiKey });
 
         const stream = await ai.models.generateContentStream({
@@ -211,22 +213,29 @@ Data: ${JSON.stringify(payload)}`;
         });
 
         let fullText = '';
-        let dots = 0;
+        let chunkCount = 0;
         for await (const chunk of stream) {
           const text = chunk.text;
           if (text) {
             fullText += text;
-            dots = (dots + 1) % 4;
-            const loading = '▌'.slice(0, dots + 1);
-            setAiOutputLines(prev => {
-              const newLines = [...prev];
-              newLines[newLines.length - 1] = `  ${loading} Analyzing semantic...`;
-              return newLines;
+            chunkCount++;
+            // Use flushSync to force React to render immediately
+            flushSync(() => {
+              setAiStreamingText(fullText);
+              setAiOutputLines(prev => {
+                const newLines = [...prev];
+                const lastIdx = newLines.length - 1;
+                newLines[lastIdx] = `  ▶ Received ${chunkCount} chunks (${fullText.length} chars)...`;
+                return newLines;
+              });
             });
           }
         }
 
-        setAiOutputLines(prev => [...prev, '', '> Parsing complete']);
+        flushSync(() => {
+          setAiStreamingText('');
+          setAiOutputLines(prev => [...prev, '', '> Parsing complete']);
+        });
         // Clean up content and handle partial JSON
         const cleanText = fullText.trim().replace(/^[^{[]*|[^}\]]*$/g, '');
         try {
@@ -254,7 +263,7 @@ Data: ${JSON.stringify(payload)}`;
           : 'openai/gpt-oss-120b:free';
         const providerLabel = isNvidia ? 'NVIDIA' : 'OpenRouter';
 
-        setAiOutputLines(prev => [...prev, `> Using ${providerLabel}: ${aiConfig.modelId || defaultModel}`, '  Sending request...']);
+        flushSync(() => setAiOutputLines(prev => [...prev, `> Using ${providerLabel}: ${aiConfig.modelId || defaultModel}`, '  Sending request...']));
 
         const response = await fetch(baseUrl, {
           method: "POST",
@@ -273,13 +282,13 @@ Data: ${JSON.stringify(payload)}`;
           })
         });
 
-        setAiOutputLines(prev => [...prev, '  Waiting for response...']);
+        flushSync(() => setAiOutputLines(prev => [...prev, '  Waiting for response...']));
         const reader = response.body?.getReader();
         const decoder = new TextDecoder();
         let fullContent = '';
 
         if (reader) {
-          let dots = 0;
+          let chunkCount = 0;
           let buffer = '';
           while (true) {
             const { done, value } = await reader.read();
@@ -298,12 +307,16 @@ Data: ${JSON.stringify(payload)}`;
                   const content = parsed.choices?.[0]?.delta?.content;
                   if (content) {
                     fullContent += content;
-                    dots = (dots + 1) % 4;
-                    const loading = '▌'.slice(0, dots + 1);
-                    setAiOutputLines(prev => {
-                      const newLines = [...prev];
-                      newLines[newLines.length - 1] = `  ${loading} Analyzing semantic...`;
-                      return newLines;
+                    chunkCount++;
+                    // Use flushSync to force React to render immediately
+                    flushSync(() => {
+                      setAiStreamingText(fullContent);
+                      setAiOutputLines(prev => {
+                        const newLines = [...prev];
+                        const lastIdx = newLines.length - 1;
+                        newLines[lastIdx] = `  ▶ Received ${chunkCount} chunks (${fullContent.length} chars)...`;
+                        return newLines;
+                      });
                     });
                   }
                 } catch (e) {
@@ -314,7 +327,10 @@ Data: ${JSON.stringify(payload)}`;
           }
         }
 
-        setAiOutputLines(prev => [...prev, '', '> Parsing complete']);
+        flushSync(() => {
+          setAiStreamingText('');
+          setAiOutputLines(prev => [...prev, '', '> Parsing complete']);
+        });
         // Extract valid JSON array from the response
         const extractJSONArray = (text: string): any[] | null => {
           // Find the first '[' and match it with the corresponding ']'
@@ -620,6 +636,7 @@ Data: ${JSON.stringify(payload)}`;
       <AIOutputStream
         isOpen={showAiOutput}
         outputs={aiOutputLines}
+        streamingText={aiStreamingText}
         onClose={() => setShowAiOutput(false)}
       />
 
