@@ -42,8 +42,8 @@ export default function App() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        return { 
-          ...parsed, 
+        return {
+          ...parsed,
           selectedVoice: parsed.selectedVoice || null,
           shuffleMode: parsed.shuffleMode ?? true
         };
@@ -162,24 +162,37 @@ export default function App() {
       return;
     }
 
-    setIsEvaluating(true);
-    setShowAiOutput(true);
-    setAiOutputLines(['Connecting to AI...']);
+    const initialVerdicts: Record<number, AIVerdict> = {};
+    const payload = words.map((w, idx) => {
+      const userAns = finalAnswers[idx]?.translation || '';
+      const standardAns = w.translation;
 
-    try {
-      const payload = words.map((w, idx) => ({
+      // Exact match check (trimmed)
+      if (userAns.trim() !== '' && userAns.trim() === standardAns.trim()) {
+        initialVerdicts[idx] = { isCorrect: true, reason: '与答案完全一致' };
+        return null;
+      }
+
+      return userAns.trim() !== '' ? {
         index: idx,
         english: w.english,
         standardTranslation: w.translation,
-        userTranslation: finalAnswers[idx]?.translation || ''
-      })).filter(item => item.userTranslation.trim() !== '');
+        userTranslation: userAns
+      } : null;
+    }).filter((item): item is any => item !== null);
 
-      if (payload.length === 0) {
-        setIsEvaluating(false);
-        setShowAiOutput(false);
-        return;
-      }
+    if (payload.length === 0) {
+      setAiVerdicts(initialVerdicts);
+      setIsEvaluating(false);
+      setShowAiOutput(false);
+      return;
+    }
 
+    setIsEvaluating(true);
+    setShowAiOutput(true);
+    setAiOutputLines(['Connecting to AI...', `> ${Object.keys(initialVerdicts).length} items matched exactly (skipped)`]);
+
+    try {
       let results: any[] = [];
       const prompt = `You are evaluating English-to-Chinese translation answers for a vocabulary test.
 
@@ -211,7 +224,7 @@ Data: ${JSON.stringify(payload)}`;
                   isCorrect: { type: Type.BOOLEAN },
                   reason: { type: Type.STRING }
                 },
-                required: ["index", "isCorrect"]
+                required: ["index", "isCorrect", "reason"]
               }
             }
           }
@@ -236,6 +249,8 @@ Data: ${JSON.stringify(payload)}`;
             });
           }
         }
+
+        console.info('[AI] Full Stream Output (Gemini):', fullText);
 
         flushSync(() => {
           setAiStreamingText('');
@@ -283,7 +298,6 @@ Data: ${JSON.stringify(payload)}`;
             "stream": true,
             "temperature": 0.3,
             "top_p": 0.95,
-            "extra_body": { "chat_template_kwargs": { "thinking": false } }
           })
         });
 
@@ -331,6 +345,8 @@ Data: ${JSON.stringify(payload)}`;
             }
           }
         }
+
+        console.info(`[AI] Full Stream Output (${providerLabel}):`, fullContent);
 
         flushSync(() => {
           setAiStreamingText('');
@@ -392,12 +408,12 @@ Data: ${JSON.stringify(payload)}`;
         setAiOutputLines(prev => [...prev, `  ${status} [${idx + 1}] ${word?.english || '?'} → ${res.reason?.substring(0, 30) || ''}...`]);
       });
 
-      const verdictMap: Record<number, AIVerdict> = {};
+      const verdictMap: Record<number, AIVerdict> = { ...initialVerdicts };
       results.forEach((res: any) => {
         verdictMap[res.index] = { isCorrect: res.isCorrect, reason: res.reason };
       });
 
-      setAiOutputLines(prev => [...prev, '', `> Evaluation complete - ${results.length} items processed`]);
+      setAiOutputLines(prev => [...prev, '', `> Evaluation complete - ${results.length} items processed (+${Object.keys(initialVerdicts).length} automatic)`]);
       setAiVerdicts(verdictMap);
 
       setTimeout(() => {

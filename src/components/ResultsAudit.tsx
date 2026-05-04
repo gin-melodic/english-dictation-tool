@@ -157,10 +157,18 @@ export default function ResultsAudit({
                       <div className={`text-xs md:text-sm font-bold lowercase mt-1 ${isTranslationCorrect ? 'text-gray-400' : 'text-red-400 line-through'}`}>
                         {answer?.translation.toLowerCase() || '—'}
                       </div>
-                      {aiVerdict?.reason && (
-                        <div className="mt-2 text-[9px] md:text-[10px] italic font-bold text-gray-400 flex items-center gap-1">
-                          <Sparkles className="w-2 h-2 md:w-3 md:h-3" />
-                          {aiVerdict.reason}
+                      
+                      {aiVerdict && (
+                        <div className={`mt-3 p-2 border-l-2 ${aiVerdict.isCorrect ? 'border-green-400 bg-green-50/50' : 'border-red-400 bg-red-50/50'}`}>
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <Sparkles className={`w-3 h-3 ${aiVerdict.isCorrect ? 'text-green-600' : 'text-red-600'}`} />
+                            <span className={`text-[9px] font-black uppercase tracking-wider ${aiVerdict.isCorrect ? 'text-green-700' : 'text-red-700'}`}>
+                              AI Feedback
+                            </span>
+                          </div>
+                          <div className={`text-[10px] md:text-xs font-medium leading-relaxed ${aiVerdict.isCorrect ? 'text-green-800' : 'text-red-800'}`}>
+                            {aiVerdict.reason || (aiVerdict.isCorrect ? 'Perfect match or valid synonym.' : 'Translation does not match the meaning or has grammatical errors.')}
+                          </div>
                         </div>
                       )}
                     </div>
