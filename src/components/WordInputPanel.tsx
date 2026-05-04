@@ -38,7 +38,7 @@ export default function WordInputPanel({
           <textarea
             value={rawInput}
             onChange={(e) => onInputChange(e.target.value)}
-            placeholder={"Example:\nApple - 苹果\nBanana - 香蕉\nCat - 猫"}
+            placeholder={"Example:\nApple - 苹果\nBanana - バナナ\nCat - 고양이"}
             className="w-full min-h-[250px] md:min-h-[40vh] bg-gray-50 border-2 border-gray-200 rounded-none p-3 md:p-4 font-mono text-xs md:text-sm focus:border-black focus:ring-0 outline-none resize-none transition-colors"
           />
           {rawInput && (

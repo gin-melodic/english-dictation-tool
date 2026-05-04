@@ -12,6 +12,10 @@ export function parseInput(rawInput: string): WordEntry[] {
     
     if (line.includes('|')) parts = line.split('|');
     else if (line.includes(':')) parts = line.split(':');
+    else if (line.includes(' - ')) {
+      const dashIdx = line.indexOf(' - ');
+      parts = [line.slice(0, dashIdx), line.slice(dashIdx + 3)];
+    }
     else if (line.includes('-')) parts = line.split('-');
     else {
       const match = line.match(/^([a-zA-Z\s]+)\s+(.+)$/);
