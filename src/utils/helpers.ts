@@ -1,4 +1,4 @@
-import { WordEntry } from '../types';
+import { WordEntry } from '../types.js';
 
 /**
  * Parse raw multiline input into WordEntry array

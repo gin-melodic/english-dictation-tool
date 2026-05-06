@@ -1,5 +1,5 @@
-import { blobGetJson, blobPutJson, blobDelete } from '../../server/blob';
-import type { Wordbook, WordbookIndexEntry } from '../../src/types';
+import { blobGetJson, blobPutJson, blobDelete } from '../../server/blob.js';
+import type { Wordbook, WordbookIndexEntry } from '../../src/types.js';
 
 const INDEX_PATH = 'wordbooks/index.json';
 const wordbookPath = (id: string) => `wordbooks/${id}.json`;

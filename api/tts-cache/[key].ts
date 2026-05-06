@@ -1,4 +1,4 @@
-import { blobHead, blobGetBinaryUrl, blobPutBinary } from '../../server/blob';
+import { blobHead, blobGetBinaryUrl, blobPutBinary } from '../../server/blob.js';
 
 export const config = {
   api: {

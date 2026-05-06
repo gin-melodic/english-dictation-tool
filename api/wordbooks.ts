@@ -2,9 +2,9 @@ import type { Request, Response } from 'express';
 import {
   blobGetJson,
   blobPutJson,
-} from '../server/blob';
-import type { Wordbook, WordbookIndexEntry } from '../src/types';
-import { parseInput } from '../src/utils/helpers';
+} from '../server/blob.js';
+import type { Wordbook, WordbookIndexEntry } from '../src/types.js';
+import { parseInput } from '../src/utils/helpers.js';
 
 const INDEX_PATH = 'wordbooks/index.json';
 const wordbookPath = (id: string) => `wordbooks/${id}.json`;
