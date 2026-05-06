@@ -7,6 +7,28 @@ export interface WordEntry {
   translation: string;
 }
 
+export interface NotebookPage {
+  id: string;
+  name: string;
+  content: string;
+}
+
+export interface Wordbook {
+  id: string;
+  name: string;
+  words: string;
+  notes: NotebookPage[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface WordbookIndexEntry {
+  id: string;
+  name: string;
+  wordCount: number;
+  updatedAt: number;
+}
+
 export interface DictationResult {
   word: WordEntry;
   userEnglish: string;

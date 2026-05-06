@@ -9,15 +9,18 @@ import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI, Type } from "@google/genai";
 
 import Header from './components/Header';
-import WordInputPanel from './components/WordInputPanel';
-import WelcomePanel from './components/WelcomePanel';
 import DictationCard from './components/DictationCard';
 import ContinuousMode from './components/ContinuousMode';
 import VoiceSelectorModal from './components/VoiceSelectorModal';
-
 import ResultsAudit from './components/ResultsAudit';
 import AISettingsModal from './components/AISettingsModal';
 import AIOutputStream from './components/AIOutputStream';
+import WordbookSidebar from './components/WordbookSidebar';
+import WordbookEditor from './components/WordbookEditor';
+import SessionLaunchPanel from './components/SessionLaunchPanel';
+import TTSCacheModal from './components/TTSCacheModal';
+
+import { useWordbooks } from './hooks/useWordbooks';
 
 import { useSpeechSynthesis } from './hooks/useSpeechSynthesis';
 import { useKokoroTTS } from './hooks/useKokoroTTS';
@@ -77,10 +80,14 @@ export default function App() {
   const [showAiOutput, setShowAiOutput] = useState(false);
   const [aiOutputLines, setAiOutputLines] = useState<string[]>([]);
   const [aiStreamingText, setAiStreamingText] = useState('');
+  const [showTTSCache, setShowTTSCache] = useState(false);
+
+  // Wordbooks
+  const wordbooks = useWordbooks();
 
   // Hooks
   const { speak: browserSpeak, cancel: browserCancel } = useSpeechSynthesis(settings);
-  const { speak: kokoroSpeak, cancel: kokoroCancel, isLoading: kokoroLoading, isReady: kokoroReady, isGenerating: kokoroGenerating, downloadProgress: kokoroDownloadProgress, downloadModel: downloadKokoroModel } = useKokoroTTS(settings.kokoroVoice, settings.kokoroRate);
+  const { speak: kokoroSpeak, cancel: kokoroCancel, isLoading: kokoroLoading, isReady: kokoroReady, isGenerating: kokoroGenerating, downloadProgress: kokoroDownloadProgress, downloadModel: downloadKokoroModel, generateBlob: kokoroGenerateBlob } = useKokoroTTS(settings.kokoroVoice, settings.kokoroRate);
 
   const speak = useCallback((text: string) => {
     if (settings.ttsProvider === 'kokoro') {
@@ -97,7 +104,8 @@ export default function App() {
 
   // Handlers
   const handleStart = useCallback(() => {
-    const parsed = parseInput(rawInput);
+    const rawWords = wordbooks.current?.words ?? rawInput;
+    const parsed = parseInput(rawWords);
     if (parsed.length === 0) return;
 
     const wordsList = settings.shuffleMode ? shuffleArray(parsed) : parsed;
@@ -111,10 +119,11 @@ export default function App() {
     setPlayCounts({});
     setUserAnswers({});
     setSkippedIndices(new Set());
-  }, [rawInput, settings.shuffleMode]);
+  }, [wordbooks.current, rawInput, settings.shuffleMode]);
 
   const handleStartContinuous = useCallback(() => {
-    const parsed = parseInput(rawInput);
+    const rawWords = wordbooks.current?.words ?? rawInput;
+    const parsed = parseInput(rawWords);
     if (parsed.length === 0) return;
 
     const wordsList = settings.shuffleMode ? shuffleArray(parsed) : parsed;
@@ -125,7 +134,7 @@ export default function App() {
     setCurrentIndex(0);
     setContinuousRepeat(0);
     setIsContinuousPlaying(settings.autoPlayFirst);
-  }, [rawInput, settings.shuffleMode, settings.autoPlayFirst]);
+  }, [wordbooks.current, rawInput, settings.shuffleMode, settings.autoPlayFirst]);
 
   const handleAbort = useCallback(() => {
     cancelSpeech();
@@ -567,7 +576,7 @@ Data: ${JSON.stringify(payload)}`;
 
   // Render
   return (
-    <div className="min-h-screen bg-[#F3F4F6] text-[#111827] font-sans flex flex-col">
+    <div className="h-screen bg-[#F3F4F6] text-[#111827] font-sans flex flex-col overflow-hidden">
       <Header
         step={step}
         currentIndex={currentIndex}
@@ -588,18 +597,60 @@ Data: ${JSON.stringify(payload)}`;
               exit={{ opacity: 0 }}
               className="h-full grid grid-cols-1 md:grid-cols-12 gap-0"
             >
-              <WordInputPanel
-                rawInput={rawInput}
-                settings={settings}
-                onInputChange={setRawInput}
-                onClearInput={() => setRawInput('')}
-                onSettingsChange={setSettings}
-                onStartInteractive={handleStart}
-                onStartContinuous={handleStartContinuous}
-                onOpenVoiceSelector={() => setShowVoiceSelector(true)}
-                selectedVoice={settings.selectedVoice}
-              />
-              <WelcomePanel />
+              {/* Left: Wordbook Sidebar */}
+              <div className="hidden md:flex md:col-span-2 h-full">
+                <WordbookSidebar
+                  index={wordbooks.index}
+                  currentId={wordbooks.current?.id ?? null}
+                  isLoading={wordbooks.isLoading}
+                  onSelect={wordbooks.selectWordbook}
+                  onCreate={wordbooks.createWordbook}
+                  onDelete={wordbooks.deleteWordbook}
+                />
+              </div>
+
+              {/* Center: Wordbook Editor */}
+              <div className="col-span-12 md:col-span-7 h-full border-r border-gray-200 overflow-hidden">
+                {wordbooks.current ? (
+                  <WordbookEditor
+                    wordbook={wordbooks.current}
+                    onUpdateWords={wordbooks.updateWords}
+                    onRename={wordbooks.renameWordbook}
+                    onAddNotePage={wordbooks.addNotePage}
+                    onUpdateNotePage={wordbooks.updateNotePage}
+                    onRenameNotePage={wordbooks.renameNotePage}
+                    onDeleteNotePage={wordbooks.deleteNotePage}
+                    onSpeak={speak}
+                    onCancelSpeech={cancelSpeech}
+                    onSave={wordbooks.saveNow}
+                    saveStatus={wordbooks.saveStatus}
+                  />
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center gap-4 text-center p-8">
+                    <div className="p-4 border-4 border-black bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+                      <span className="text-4xl">📖</span>
+                    </div>
+                    <h3 className="text-lg font-black uppercase tracking-tight">No Wordbook Selected</h3>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest max-w-xs">
+                      {wordbooks.isLoading ? 'Loading…' : 'Create a wordbook using the sidebar on the left.'}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Right: Session Settings + Launch */}
+              <div className="col-span-12 md:col-span-3 h-full">
+                <SessionLaunchPanel
+                  settings={settings}
+                  hasWords={!!wordbooks.current?.words?.trim()}
+                  onSettingsChange={setSettings}
+                  onStartInteractive={handleStart}
+                  onStartContinuous={handleStartContinuous}
+                  onOpenVoiceSelector={() => setShowVoiceSelector(true)}
+                  onOpenTTSCache={() => setShowTTSCache(true)}
+                  selectedVoice={settings.selectedVoice}
+                />
+              </div>
             </motion.div>
           )}
 
@@ -714,6 +765,31 @@ Data: ${JSON.stringify(payload)}`;
               <div className="h-1.5 bg-white rounded-full animate-pulse" />
             </div>
           )}
+        </div>
+      )}
+
+      {/* TTS Cache Modal */}
+      {showTTSCache && wordbooks.current && (
+        <TTSCacheModal
+          words={parseInput(wordbooks.current.words)}
+          voice={settings.kokoroVoice}
+          generateBlob={kokoroGenerateBlob}
+          kokoroReady={kokoroReady}
+          kokoroLoading={kokoroLoading}
+          downloadProgress={kokoroDownloadProgress}
+          onClose={() => setShowTTSCache(false)}
+        />
+      )}
+
+      {/* Save status indicator */}
+      {wordbooks.saveStatus !== 'idle' && (
+        <div className={`fixed bottom-4 right-4 z-40 px-3 py-2 text-[10px] font-black uppercase tracking-widest border-2 ${
+          wordbooks.saveStatus === 'saving' ? 'bg-gray-900 text-white border-gray-700' :
+          wordbooks.saveStatus === 'saved' ? 'bg-green-900 text-white border-green-700' :
+          'bg-red-900 text-white border-red-700'
+        }`}>
+          {wordbooks.saveStatus === 'saving' ? '⏳ Saving…' :
+           wordbooks.saveStatus === 'saved' ? '✓ Saved' : '✗ Save Error'}
         </div>
       )}
 

@@ -1,6 +1,12 @@
 import { useRef, useCallback, useState, useEffect } from 'react';
 
 const MAX_CACHE_SIZE = 200;
+
+export async function textToKey(text: string, voice: string): Promise<string> {
+  const raw = `${text}::${voice}`;
+  const buf = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(raw));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
 const audioCache = new Map<string, Blob>();
 
 function getCacheKey(text: string, voice: string): string {
@@ -122,6 +128,33 @@ export function useKokoroTTS(voice: string, rate: number = 1.0) {
     return new Promise<boolean>(resolve => _loadResolvers.push(resolve));
   }, []);
 
+  const generateBlob = useCallback(async (text: string): Promise<Blob | null> => {
+    const cacheKey = getCacheKey(text, voice);
+    const cached = getCached(cacheKey);
+    if (cached) return cached;
+
+    const ok = await ensureLoaded();
+    if (!ok) return null;
+
+    const genId = String(++genIdRef.current);
+    setState(prev => ({ ...prev, isGenerating: true }));
+    try {
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        pendingRef.current.set(genId, { resolve, reject });
+        getOrCreateWorker().postMessage({ type: 'generate', payload: { text, voice, id: genId } });
+      });
+      setCached(cacheKey, blob);
+      return blob;
+    } catch (err) {
+      console.error('[useKokoroTTS] generateBlob error:', err);
+      return null;
+    } finally {
+      if (pendingRef.current.size === 0) {
+        setState(prev => ({ ...prev, isGenerating: false }));
+      }
+    }
+  }, [voice, ensureLoaded]);
+
   const speak = useCallback(async (text: string) => {
     if (audioRef.current) {
       audioRef.current.pause();
@@ -197,5 +230,5 @@ export function useKokoroTTS(voice: string, rate: number = 1.0) {
     currentSpeakIdRef.current = String(++genIdRef.current);
   }, []);
 
-  return { speak, cancel, downloadModel, ...state };
+  return { speak, cancel, downloadModel, generateBlob, ...state };
 }
