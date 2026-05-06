@@ -587,7 +587,7 @@ Data: ${JSON.stringify(payload)}`;
         onOpenAISettings={() => setShowAiSettings(true)}
       />
 
-      <main className="flex-1 overflow-hidden">
+      <main className="flex-1 overflow-y-auto md:overflow-hidden">
         <AnimatePresence mode="wait">
           {step === 1 && (
             <motion.div
@@ -595,7 +595,7 @@ Data: ${JSON.stringify(payload)}`;
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="h-full grid grid-cols-1 md:grid-cols-12 gap-0"
+              className="md:h-full grid grid-cols-1 md:grid-cols-12 gap-0"
             >
               {/* Left: Wordbook Sidebar */}
               <div className="hidden md:flex md:col-span-2 h-full">
@@ -610,7 +610,7 @@ Data: ${JSON.stringify(payload)}`;
               </div>
 
               {/* Center: Wordbook Editor */}
-              <div className="col-span-12 md:col-span-7 h-full border-r border-gray-200 overflow-hidden">
+              <div className="col-span-12 md:col-span-7 h-[50vh] md:h-full border-r border-gray-200 overflow-hidden">
                 {wordbooks.current ? (
                   <WordbookEditor
                     wordbook={wordbooks.current}
@@ -639,7 +639,7 @@ Data: ${JSON.stringify(payload)}`;
               </div>
 
               {/* Right: Session Settings + Launch */}
-              <div className="col-span-12 md:col-span-3 h-full">
+              <div className="col-span-12 md:col-span-3 md:h-full">
                 <SessionLaunchPanel
                   settings={settings}
                   hasWords={!!wordbooks.current?.words?.trim()}
