@@ -80,7 +80,7 @@ export default function App() {
 
   // Hooks
   const { speak: browserSpeak, cancel: browserCancel } = useSpeechSynthesis(settings);
-  const { speak: kokoroSpeak, cancel: kokoroCancel, isLoading: kokoroLoading, isReady: kokoroReady } = useKokoroTTS(settings.kokoroVoice, settings.kokoroRate);
+  const { speak: kokoroSpeak, cancel: kokoroCancel, isLoading: kokoroLoading, isReady: kokoroReady, isGenerating: kokoroGenerating, downloadProgress: kokoroDownloadProgress, downloadModel: downloadKokoroModel } = useKokoroTTS(settings.kokoroVoice, settings.kokoroRate);
 
   const speak = useCallback((text: string) => {
     if (settings.ttsProvider === 'kokoro') {
@@ -691,11 +691,29 @@ Data: ${JSON.stringify(payload)}`;
         onClose={() => setShowAiOutput(false)}
       />
 
-      {/* Kokoro loading indicator */}
-      {settings.ttsProvider === 'kokoro' && kokoroLoading && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-black text-white text-xs font-bold uppercase tracking-widest px-4 py-2 flex items-center gap-2 shadow-lg">
-          <span className="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-          Loading Kokoro AI model…
+      {/* Kokoro status indicator */}
+      {settings.ttsProvider === 'kokoro' && (kokoroLoading || kokoroGenerating) && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-xs font-medium px-4 py-3 rounded-xl flex flex-col gap-2 shadow-xl" style={{ minWidth: '220px' }}>
+          <div className="flex items-center gap-2">
+            <span className="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin flex-shrink-0" />
+            <span>{kokoroLoading ? 'Loading Kokoro AI…' : 'Synthesizing speech…'}</span>
+          </div>
+          {kokoroLoading && kokoroDownloadProgress !== null && (
+            <div className="flex items-center gap-2">
+              <div className="flex-1 bg-gray-700 rounded-full h-1.5">
+                <div
+                  className="bg-white h-1.5 rounded-full transition-all duration-300"
+                  style={{ width: `${kokoroDownloadProgress}%` }}
+                />
+              </div>
+              <span className="tabular-nums text-gray-400">{kokoroDownloadProgress}%</span>
+            </div>
+          )}
+          {kokoroGenerating && (
+            <div className="w-full bg-gray-700 rounded-full h-1.5 overflow-hidden">
+              <div className="h-1.5 bg-white rounded-full animate-pulse" />
+            </div>
+          )}
         </div>
       )}
 
@@ -708,6 +726,9 @@ Data: ${JSON.stringify(payload)}`;
         ttsProvider={settings.ttsProvider}
         kokoroVoice={settings.kokoroVoice}
         kokoroReady={kokoroReady}
+        kokoroLoading={kokoroLoading}
+        downloadProgress={kokoroDownloadProgress}
+        onDownloadModel={downloadKokoroModel}
         onProviderChange={handleProviderChange}
         onKokoroVoiceSelect={handleKokoroVoiceSelect}
         kokoroRate={settings.kokoroRate}

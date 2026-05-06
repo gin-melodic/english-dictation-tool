@@ -43,6 +43,9 @@ interface VoiceSelectorModalProps {
   ttsProvider: 'browser' | 'kokoro';
   kokoroVoice: string;
   kokoroReady: boolean;
+  kokoroLoading: boolean;
+  downloadProgress: number | null;
+  onDownloadModel: () => void;
   onProviderChange: (provider: 'browser' | 'kokoro') => void;
   onKokoroVoiceSelect: (voice: string) => void;
   kokoroRate: number;
@@ -129,7 +132,7 @@ function VoiceItem({ info, isSelected, onSelect, onPreview }: VoiceItemProps) {
   );
 }
 
-export default function VoiceSelectorModal({ isOpen, selectedVoice, onSelect, onClose, ttsProvider, kokoroVoice, kokoroReady, onProviderChange, onKokoroVoiceSelect, kokoroRate, onKokoroRateChange }: VoiceSelectorModalProps) {
+export default function VoiceSelectorModal({ isOpen, selectedVoice, onSelect, onClose, ttsProvider, kokoroVoice, kokoroReady, kokoroLoading, downloadProgress, onDownloadModel, onProviderChange, onKokoroVoiceSelect, kokoroRate, onKokoroRateChange }: VoiceSelectorModalProps) {
   const [voices, setVoices] = useState<ReturnType<typeof getEnglishVoices>>([]);
   const [isPlaying, setIsPlaying] = useState<string | null>(null);
 
@@ -298,12 +301,51 @@ export default function VoiceSelectorModal({ isOpen, selectedVoice, onSelect, on
           {ttsProvider === 'kokoro' && (
             <>
               <div className="border-2 border-blue-200 bg-blue-50 p-3 md:p-4">
-                <p className="text-[10px] md:text-xs font-bold text-blue-700 uppercase tracking-wider">
-                  Kokoro AI · 82M ONNX Model
-                </p>
-                <p className="text-[9px] md:text-[10px] text-blue-600 mt-1">
-                  Model downloaded from HuggingFace on first use (~60 MB). Runs entirely in-browser.
-                </p>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] md:text-xs font-bold text-blue-700 uppercase tracking-wider">
+                      Kokoro AI · 82M ONNX Model
+                    </p>
+                    <p className="text-[9px] md:text-[10px] text-blue-600 mt-1">
+                      Model downloaded from HuggingFace on first use (~60 MB). Runs entirely in-browser.
+                    </p>
+                    {kokoroLoading && (
+                      <div className="mt-2">
+                        <div className="w-full bg-blue-200 h-1.5 overflow-hidden">
+                          {downloadProgress !== null && downloadProgress > 0 ? (
+                            <div
+                              className="bg-blue-600 h-1.5 transition-all duration-500"
+                              style={{ width: `${downloadProgress}%` }}
+                            />
+                          ) : (
+                            <div className="bg-blue-500 h-1.5 animate-pulse" style={{ width: '30%' }} />
+                          )}
+                        </div>
+                        <p className="text-[9px] font-mono text-blue-600 mt-0.5">
+                          {downloadProgress !== null && downloadProgress > 0
+                            ? `Downloading... ${downloadProgress}%`
+                            : 'Connecting...'}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={onDownloadModel}
+                    disabled={kokoroLoading}
+                    className={`flex-shrink-0 border-2 px-2.5 py-1.5 text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all ${
+                      kokoroLoading
+                        ? 'border-gray-300 text-gray-400 cursor-not-allowed bg-gray-50'
+                        : 'border-black text-black hover:bg-black hover:text-white bg-white'
+                    }`}
+                  >
+                    {kokoroLoading ? (
+                      <span className="flex items-center gap-1.5">
+                        <span className="inline-block w-2 h-2 border border-current border-t-transparent rounded-full animate-spin" />
+                        下载中
+                      </span>
+                    ) : kokoroReady ? '重新下载' : '下载模型'}
+                  </button>
+                </div>
               </div>
 
               {/* Speed control */}
