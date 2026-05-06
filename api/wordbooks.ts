@@ -61,3 +61,9 @@ export async function handlePost(req: Request, res: Response) {
     res.status(500).json({ error: String(e) });
   }
 }
+
+export default async function handler(req: any, res: any) {
+  if (req.method === 'GET') return handleGet(req, res);
+  if (req.method === 'POST') return handlePost(req, res);
+  res.status(405).end();
+}

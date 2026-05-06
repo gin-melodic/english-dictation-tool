@@ -18,23 +18,23 @@ export function apiPlugin(): Plugin {
         return mod.handlePost(req, res);
       });
       app.get('/api/wordbooks/:id', async (req, res) => {
-        const mod = await server.ssrLoadModule('/api/wordbook-item.ts');
+        const mod = await server.ssrLoadModule('/api/wordbooks/[id].ts');
         return mod.handleGetOne(req, res);
       });
       app.delete('/api/wordbooks/:id', async (req, res) => {
-        const mod = await server.ssrLoadModule('/api/wordbook-item.ts');
+        const mod = await server.ssrLoadModule('/api/wordbooks/[id].ts');
         return mod.handleDelete(req, res);
       });
       app.head('/api/tts-cache/:key', async (req, res) => {
-        const mod = await server.ssrLoadModule('/api/tts-cache.ts');
+        const mod = await server.ssrLoadModule('/api/tts-cache/[key].ts');
         return mod.handleHead(req, res);
       });
       app.get('/api/tts-cache/:key', async (req, res) => {
-        const mod = await server.ssrLoadModule('/api/tts-cache.ts');
+        const mod = await server.ssrLoadModule('/api/tts-cache/[key].ts');
         return mod.handleGet(req, res);
       });
       app.put('/api/tts-cache/:key', async (req, res) => {
-        const mod = await server.ssrLoadModule('/api/tts-cache.ts');
+        const mod = await server.ssrLoadModule('/api/tts-cache/[key].ts');
         return mod.handlePut(req, res);
       });
 
