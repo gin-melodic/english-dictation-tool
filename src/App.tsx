@@ -20,6 +20,7 @@ import AISettingsModal from './components/AISettingsModal';
 import AIOutputStream from './components/AIOutputStream';
 
 import { useSpeechSynthesis } from './hooks/useSpeechSynthesis';
+import { useKokoroTTS } from './hooks/useKokoroTTS';
 import { parseInput, shuffleArray } from './utils/helpers';
 
 import type {
@@ -45,13 +46,16 @@ export default function App() {
         return {
           ...parsed,
           selectedVoice: parsed.selectedVoice || null,
-          shuffleMode: parsed.shuffleMode ?? true
+          shuffleMode: parsed.shuffleMode ?? true,
+          ttsProvider: parsed.ttsProvider || 'browser',
+          kokoroVoice: parsed.kokoroVoice || 'af_heart',
+          kokoroRate: parsed.kokoroRate ?? 1.0,
         };
       } catch {
         // fall through
       }
     }
-    return { maxPlays: 2, voiceRate: 1.0, autoPlayFirst: true, selectedVoice: null, shuffleMode: true };
+    return { maxPlays: 2, voiceRate: 1.0, autoPlayFirst: true, selectedVoice: null, shuffleMode: true, ttsProvider: 'browser', kokoroVoice: 'af_heart', kokoroRate: 1.0 };
   });
   const [showVoiceSelector, setShowVoiceSelector] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -75,7 +79,21 @@ export default function App() {
   const [aiStreamingText, setAiStreamingText] = useState('');
 
   // Hooks
-  const { speak, cancel: cancelSpeech } = useSpeechSynthesis(settings);
+  const { speak: browserSpeak, cancel: browserCancel } = useSpeechSynthesis(settings);
+  const { speak: kokoroSpeak, cancel: kokoroCancel, isLoading: kokoroLoading, isReady: kokoroReady } = useKokoroTTS(settings.kokoroVoice, settings.kokoroRate);
+
+  const speak = useCallback((text: string) => {
+    if (settings.ttsProvider === 'kokoro') {
+      kokoroSpeak(text);
+    } else {
+      browserSpeak(text);
+    }
+  }, [settings.ttsProvider, browserSpeak, kokoroSpeak]);
+
+  const cancelSpeech = useCallback(() => {
+    browserCancel();
+    kokoroCancel();
+  }, [browserCancel, kokoroCancel]);
 
   // Handlers
   const handleStart = useCallback(() => {
@@ -470,6 +488,18 @@ Data: ${JSON.stringify(payload)}`;
     setSettings(prev => ({ ...prev, selectedVoice: voiceName }));
   }, []);
 
+  const handleProviderChange = useCallback((provider: 'browser' | 'kokoro') => {
+    setSettings(prev => ({ ...prev, ttsProvider: provider }));
+  }, []);
+
+  const handleKokoroVoiceSelect = useCallback((voice: string) => {
+    setSettings(prev => ({ ...prev, kokoroVoice: voice }));
+  }, []);
+
+  const handleKokoroRateChange = useCallback((rate: number) => {
+    setSettings(prev => ({ ...prev, kokoroRate: rate }));
+  }, []);
+
   // Continuous mode effect
   useEffect(() => {
     let timeout: NodeJS.Timeout;
@@ -661,12 +691,27 @@ Data: ${JSON.stringify(payload)}`;
         onClose={() => setShowAiOutput(false)}
       />
 
+      {/* Kokoro loading indicator */}
+      {settings.ttsProvider === 'kokoro' && kokoroLoading && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-black text-white text-xs font-bold uppercase tracking-widest px-4 py-2 flex items-center gap-2 shadow-lg">
+          <span className="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          Loading Kokoro AI model…
+        </div>
+      )}
+
       {/* Voice Selector Modal */}
       <VoiceSelectorModal
         isOpen={showVoiceSelector}
         selectedVoice={settings.selectedVoice}
         onSelect={handleVoiceSelect}
         onClose={() => setShowVoiceSelector(false)}
+        ttsProvider={settings.ttsProvider}
+        kokoroVoice={settings.kokoroVoice}
+        kokoroReady={kokoroReady}
+        onProviderChange={handleProviderChange}
+        onKokoroVoiceSelect={handleKokoroVoiceSelect}
+        kokoroRate={settings.kokoroRate}
+        onKokoroRateChange={handleKokoroRateChange}
       />
     </div>
   );

@@ -20,6 +20,9 @@ export interface AppSettings {
   autoPlayFirst: boolean;
   selectedVoice: string | null; // voice name or null for auto
   shuffleMode: boolean;
+  ttsProvider: 'browser' | 'kokoro';
+  kokoroVoice: string;
+  kokoroRate: number;
 }
 
 export interface AIConfig {
