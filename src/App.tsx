@@ -716,6 +716,7 @@ Data: ${JSON.stringify(payload)}`;
                 settings={settings}
                 onOpenVoiceSelector={() => setShowVoiceSelector(true)}
                 selectedVoice={settings.selectedVoice}
+                onSpeak={speak}
               />
             </motion.div>
           )}

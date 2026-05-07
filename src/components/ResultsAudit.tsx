@@ -1,7 +1,6 @@
 import { motion } from 'motion/react';
 import { Sparkles, CheckCircle2, XCircle, Volume2, Undo2 } from 'lucide-react';
 import { WordEntry, SessionSource, AIVerdict, AppSettings } from '../types';
-import { useSpeechSynthesis } from '../hooks/useSpeechSynthesis';
 
 interface ResultsAuditProps {
   words: WordEntry[];
@@ -15,6 +14,7 @@ interface ResultsAuditProps {
   settings: AppSettings;
   onOpenVoiceSelector: () => void;
   selectedVoice: string | null;
+  onSpeak: (text: string) => void;
 }
 
 export default function ResultsAudit({
@@ -28,10 +28,10 @@ export default function ResultsAudit({
   onBackToIntegrity,
   settings,
   onOpenVoiceSelector,
-  selectedVoice
+  selectedVoice,
+  onSpeak
 }: ResultsAuditProps) {
   const isContinuous = sessionSource === 'continuous';
-  const { speak } = useSpeechSynthesis(settings);
 
   if (isEvaluating) {
     return (
@@ -139,7 +139,7 @@ export default function ResultsAudit({
                     <div className="flex items-center gap-2 md:gap-3">
                       <div className="text-lg md:text-2xl font-black lowercase tracking-tight">{word.english.toLowerCase()}</div>
                       <button
-                        onClick={() => speak(word.english)}
+                        onClick={() => onSpeak(word.english)}
                         className="p-1 hover:bg-black/5 rounded transition-colors touch-manipulation"
                         title="Play audio"
                       >

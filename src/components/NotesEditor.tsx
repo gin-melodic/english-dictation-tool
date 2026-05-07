@@ -19,7 +19,7 @@ export default function NotesEditor({
   onDeletePage,
 }: Props) {
   const [activePageId, setActivePageId] = useState<string | null>(pages[0]?.id ?? null);
-  const [previewMode, setPreviewMode] = useState(false);
+  const [previewMode, setPreviewMode] = useState(() => !!(pages[0]?.content?.trim()));
   const [addingPage, setAddingPage] = useState(false);
   const [newPageName, setNewPageName] = useState('');
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -27,6 +27,8 @@ export default function NotesEditor({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const prevLenRef = useRef(pages.length);
+  const pagesRef = useRef(pages);
+  useEffect(() => { pagesRef.current = pages; }, [pages]);
 
   useEffect(() => {
     if (pages.length > prevLenRef.current) {
@@ -38,6 +40,14 @@ export default function NotesEditor({
     }
     prevLenRef.current = pages.length;
   }, [pages, activePageId]);
+
+  useEffect(() => {
+    const page = pagesRef.current.find(p => p.id === activePageId);
+    if (page) {
+      setPreviewMode(!!(page.content?.trim()));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePageId]);
 
   const activePage = pages.find(p => p.id === activePageId) ?? pages[0] ?? null;
 

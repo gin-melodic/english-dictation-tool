@@ -126,9 +126,9 @@ export default function DictationCard({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-8 md:mb-12">
-        <div className="space-y-1 md:space-y-2">
-          <label className="text-[8px] md:text-[10px] font-black uppercase text-gray-400 tracking-widest">English String</label>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-4 mb-8 md:mb-12">
+        <div className="space-y-1.5 md:space-y-2">
+          <label className="text-[9px] md:text-[10px] font-black uppercase text-gray-400 tracking-widest">English String</label>
           <input
             type="text"
             autoComplete="off"
@@ -141,11 +141,11 @@ export default function DictationCard({
             value={userAnswers[currentIndex]?.english || ''}
             onChange={(e) => onEnglishChange(e.target.value)}
             placeholder="Input..."
-            className="w-full bg-gray-50 border-2 border-black rounded-none p-4 md:p-6 text-lg md:text-2xl font-black focus:bg-white outline-none transition-all placeholder:text-gray-200"
+            className="w-full bg-gray-50 border-2 border-black rounded-none py-5 px-4 md:p-6 text-xl md:text-2xl font-black focus:bg-white outline-none transition-all placeholder:text-gray-200 min-h-[64px] md:min-h-0"
           />
         </div>
-        <div className="space-y-1 md:space-y-2">
-          <label className="text-[8px] md:text-[10px] font-black uppercase text-gray-400 tracking-widest">Translation Data</label>
+        <div className="space-y-1.5 md:space-y-2">
+          <label className="text-[9px] md:text-[10px] font-black uppercase text-gray-400 tracking-widest">Translation Data</label>
           <input
             type="text"
             autoComplete="off"
@@ -153,7 +153,7 @@ export default function DictationCard({
             value={userAnswers[currentIndex]?.translation || ''}
             onChange={(e) => onTranslationChange(e.target.value)}
             placeholder="Input..."
-            className="w-full bg-gray-50 border-2 border-black rounded-none p-4 md:p-6 text-lg md:text-2xl font-black focus:bg-white outline-none transition-all placeholder:text-gray-200"
+            className="w-full bg-gray-50 border-2 border-black rounded-none py-5 px-4 md:p-6 text-xl md:text-2xl font-black focus:bg-white outline-none transition-all placeholder:text-gray-200 min-h-[64px] md:min-h-0"
           />
         </div>
       </div>

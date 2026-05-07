@@ -9,6 +9,31 @@ export async function textToKey(text: string, voice: string): Promise<string> {
 }
 const audioCache = new Map<string, Blob>();
 
+async function fetchFromRemote(text: string, voice: string): Promise<Blob | null> {
+  try {
+    const key = await textToKey(text, voice);
+    const res = await fetch(`/api/tts-cache/${key}`);
+    if (res.ok) {
+      const arrayBuffer = await res.arrayBuffer();
+      const contentType = res.headers.get('content-type') || 'audio/wav';
+      return new Blob([arrayBuffer], { type: contentType });
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
+function uploadToRemote(text: string, voice: string, blob: Blob): void {
+  textToKey(text, voice).then(key => {
+    blob.arrayBuffer().then(buf => {
+      fetch(`/api/tts-cache/${key}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': blob.type || 'audio/wav' },
+        body: buf,
+      }).catch(() => { /* ignore upload errors */ });
+    }).catch(() => { /* ignore */ });
+  }).catch(() => { /* ignore */ });
+}
+
 function getCacheKey(text: string, voice: string): string {
   return `${text}::${voice}`;
 }
@@ -133,6 +158,12 @@ export function useKokoroTTS(voice: string, rate: number = 1.0) {
     const cached = getCached(cacheKey);
     if (cached) return cached;
 
+    const remoteBlob = await fetchFromRemote(text, voice);
+    if (remoteBlob) {
+      setCached(cacheKey, remoteBlob);
+      return remoteBlob;
+    }
+
     const ok = await ensureLoaded();
     if (!ok) return null;
 
@@ -144,6 +175,7 @@ export function useKokoroTTS(voice: string, rate: number = 1.0) {
         getOrCreateWorker().postMessage({ type: 'generate', payload: { text, voice, id: genId } });
       });
       setCached(cacheKey, blob);
+      uploadToRemote(text, voice, blob);
       return blob;
     } catch (err) {
       console.error('[useKokoroTTS] generateBlob error:', err);
@@ -170,6 +202,15 @@ export function useKokoroTTS(voice: string, rate: number = 1.0) {
     let blob = getCached(cacheKey);
 
     if (!blob) {
+      const remoteBlob = await fetchFromRemote(text, voice);
+      if (currentSpeakIdRef.current !== speakId) return;
+      if (remoteBlob) {
+        setCached(cacheKey, remoteBlob);
+        blob = remoteBlob;
+      }
+    }
+
+    if (!blob) {
       const ok = await ensureLoaded();
       if (!ok) return;
       if (currentSpeakIdRef.current !== speakId) return;
@@ -182,6 +223,7 @@ export function useKokoroTTS(voice: string, rate: number = 1.0) {
           getOrCreateWorker().postMessage({ type: 'generate', payload: { text, voice, id: speakId } });
         });
         setCached(cacheKey, blob);
+        uploadToRemote(text, voice, blob);
       } catch (err) {
         console.error('[useKokoroTTS] generate error:', err);
         setState(prev => ({ ...prev, isGenerating: false }));
