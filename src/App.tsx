@@ -587,7 +587,7 @@ Data: ${JSON.stringify(payload)}`;
         onOpenAISettings={() => setShowAiSettings(true)}
       />
 
-      <main className="flex-1 overflow-y-auto md:overflow-hidden">
+      <main className="flex-1 overflow-y-auto md:overflow-y-auto">
         <AnimatePresence mode="wait">
           {step === 1 && (
             <motion.div
