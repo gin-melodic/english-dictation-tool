@@ -89,8 +89,9 @@ export default function WordbookEditor({
         {(['words', 'notes'] as const).map(tab => (
           <button
             key={tab}
+            type="button"
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-colors ${
+            className={`px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-colors touch-manipulation ${
               activeTab === tab
                 ? 'border-b-2 border-black text-black'
                 : 'text-gray-400 hover:text-black'
@@ -105,7 +106,7 @@ export default function WordbookEditor({
       <div className="flex-1 min-h-0 overflow-hidden">
         {activeTab === 'words' ? (
           <div className="flex flex-col h-full">
-            <div className="relative flex-1 min-h-0 flex flex-col">
+            <div className="relative flex-1 min-h-[15vh] flex flex-col">
               <textarea
                 value={wordbook.words}
                 onChange={e => onUpdateWords(e.target.value)}

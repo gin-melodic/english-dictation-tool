@@ -8,6 +8,7 @@ import { flushSync } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI, Type } from "@google/genai";
 
+import { BookOpen } from 'lucide-react';
 import Header from './components/Header';
 import DictationCard from './components/DictationCard';
 import ContinuousMode from './components/ContinuousMode';
@@ -81,6 +82,7 @@ export default function App() {
   const [aiOutputLines, setAiOutputLines] = useState<string[]>([]);
   const [aiStreamingText, setAiStreamingText] = useState('');
   const [showTTSCache, setShowTTSCache] = useState(false);
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
 
   // Wordbooks
   const wordbooks = useWordbooks();
@@ -597,6 +599,20 @@ Data: ${JSON.stringify(payload)}`;
               exit={{ opacity: 0 }}
               className="md:h-full grid grid-cols-1 md:grid-cols-12 gap-0"
             >
+              {/* Mobile: Wordbooks toggle button */}
+              <div className="col-span-1 md:hidden flex items-center gap-2 px-3 py-2 bg-white border-b border-gray-200">
+                <button
+                  onClick={() => setShowMobileSidebar(true)}
+                  className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest border-2 border-black px-3 py-1.5 hover:bg-black hover:text-white transition-colors"
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  Wordbooks
+                </button>
+                {wordbooks.current && (
+                  <span className="text-[10px] font-bold text-gray-500 truncate max-w-[160px]">{wordbooks.current.name}</span>
+                )}
+              </div>
+
               {/* Left: Wordbook Sidebar */}
               <div className="hidden md:flex md:col-span-2 h-full">
                 <WordbookSidebar
@@ -722,6 +738,41 @@ Data: ${JSON.stringify(payload)}`;
           )}
         </AnimatePresence>
       </main>
+
+      {/* Mobile: Wordbook Sidebar Drawer */}
+      <AnimatePresence>
+        {showMobileSidebar && (
+          <motion.div
+            key="mobile-sidebar"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="md:hidden"
+          >
+            <div
+              className="fixed inset-0 bg-black/40 z-40"
+              onClick={() => setShowMobileSidebar(false)}
+            />
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'tween', duration: 0.25 }}
+              className="fixed inset-y-0 left-0 w-64 z-50"
+            >
+              <WordbookSidebar
+                index={wordbooks.index}
+                currentId={wordbooks.current?.id ?? null}
+                isLoading={wordbooks.isLoading}
+                onSelect={(id) => { wordbooks.selectWordbook(id); setShowMobileSidebar(false); }}
+                onCreate={wordbooks.createWordbook}
+                onDelete={wordbooks.deleteWordbook}
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* AI Settings Modal */}
       <AnimatePresence>

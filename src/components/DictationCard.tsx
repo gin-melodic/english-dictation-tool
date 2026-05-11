@@ -30,6 +30,7 @@ export default function DictationCard({
   onDebugAutofill
 }: DictationCardProps) {
   const englishInputRef = useRef<HTMLInputElement>(null);
+  const translationInputRef = useRef<HTMLInputElement>(null);
   const autoPlayedRef = useRef<Set<number>>(new Set());
 
   const currentWord = words[currentIndex];
@@ -69,6 +70,14 @@ export default function DictationCard({
     if (e.key === 'Enter') {
       e.preventDefault();
       onNext();
+    }
+  };
+
+  const handleKeyDownNext = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      // translationInputRef get focus  
+      translationInputRef.current?.focus();
     }
   };
 
@@ -138,6 +147,7 @@ export default function DictationCard({
             inputMode="text"
             lang="en"
             spellCheck={false}
+            onKeyDown={handleKeyDownNext}
             value={userAnswers[currentIndex]?.english || ''}
             onChange={(e) => onEnglishChange(e.target.value)}
             placeholder="Input..."
@@ -149,6 +159,7 @@ export default function DictationCard({
           <input
             type="text"
             autoComplete="off"
+            ref={translationInputRef}
             onKeyDown={handleKeyDown}
             value={userAnswers[currentIndex]?.translation || ''}
             onChange={(e) => onTranslationChange(e.target.value)}
