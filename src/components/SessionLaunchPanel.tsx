@@ -82,7 +82,7 @@ export default function SessionLaunchPanel({
             >
               <span
                 className={`absolute top-0.5 w-4 h-4 bg-white border-2 border-black transition-transform ${
-                  settings[key as keyof AppSettings] ? 'translate-x-6' : 'translate-x-0.5'
+                  settings[key as keyof AppSettings] ? 'translate-x-1' : '-translate-x-5'
                 }`}
               />
             </button>
