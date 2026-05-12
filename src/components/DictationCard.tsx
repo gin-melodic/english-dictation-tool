@@ -77,7 +77,9 @@ export default function DictationCard({
     if (e.key === 'Enter') {
       e.preventDefault();
       // translationInputRef get focus  
-      translationInputRef.current?.focus();
+      if (window.innerWidth < 768) {
+        translationInputRef.current?.focus();
+      }
     }
   };
 
