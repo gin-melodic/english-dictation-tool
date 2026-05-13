@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Plus, Trash2, BookOpen, Check, X } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Plus, Trash2, BookOpen, Check, X, Download, Upload } from 'lucide-react';
 import type { WordbookIndexEntry } from '../types';
 
 interface Props {
@@ -9,6 +9,8 @@ interface Props {
   onSelect: (id: string) => void;
   onCreate: (name: string) => void;
   onDelete: (id: string) => void;
+  onExport?: () => void;
+  onImport?: (file: File) => Promise<{ imported: number; total: number }>;
 }
 
 export default function WordbookSidebar({
@@ -18,10 +20,28 @@ export default function WordbookSidebar({
   onSelect,
   onCreate,
   onDelete,
+  onExport,
+  onImport,
 }: Props) {
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [importMsg, setImportMsg] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !onImport) return;
+    e.target.value = '';
+    try {
+      const { imported, total } = await onImport(file);
+      setImportMsg(`Imported ${imported}/${total}`);
+      setTimeout(() => setImportMsg(null), 3000);
+    } catch (err) {
+      setImportMsg(`Error: ${err}`);
+      setTimeout(() => setImportMsg(null), 4000);
+    }
+  }
 
   function submitCreate() {
     const name = newName.trim();
@@ -60,6 +80,10 @@ export default function WordbookSidebar({
           <button onClick={submitCreate} className="p-1 bg-black text-white hover:bg-gray-800"><Check className="w-3 h-3" /></button>
           <button onClick={() => setCreating(false)} className="p-1 border-2 border-black hover:bg-gray-100"><X className="w-3 h-3" /></button>
         </div>
+      )}
+
+      {importMsg && (
+        <div className="px-3 py-1.5 text-[10px] font-bold bg-green-50 text-green-700 border-b border-green-200">{importMsg}</div>
       )}
 
       <ul className="flex-1 overflow-y-auto">
@@ -109,6 +133,39 @@ export default function WordbookSidebar({
           </li>
         ))}
       </ul>
+      {(onExport || onImport) && (
+        <div className="flex border-t border-gray-100">
+          {onExport && (
+            <button
+              onClick={onExport}
+              title="Export all wordbooks as JSON"
+              className="flex-1 flex items-center justify-center gap-1 py-2 text-[9px] font-black uppercase tracking-widest hover:bg-gray-50 transition-colors text-gray-500 hover:text-black"
+            >
+              <Download className="w-3 h-3" />
+              Export
+            </button>
+          )}
+          {onImport && (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json,application/json"
+                className="hidden"
+                onChange={handleImportFile}
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                title="Import wordbooks from JSON"
+                className="flex-1 flex items-center justify-center gap-1 py-2 text-[9px] font-black uppercase tracking-widest hover:bg-gray-50 transition-colors text-gray-500 hover:text-black border-l border-gray-100"
+              >
+                <Upload className="w-3 h-3" />
+                Import
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </aside>
   );
 }

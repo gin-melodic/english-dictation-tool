@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { X, Zap, RotateCcw } from 'lucide-react';
 import type { WordEntry } from '../types';
 import { textToKey } from '../hooks/useKokoroTTS';
+import { ttsCacheHas, ttsCachePut } from '../utils/idb';
 
 interface Props {
   words: WordEntry[];
@@ -41,11 +42,10 @@ export default function TTSCacheModal({ words, voice, generateBlob, kokoroReady,
         const text = words[i].english;
         const key = await textToKey(text, voice);
 
-        // Check remote cache
+        // Check local IndexedDB cache
         updateStatus(i, 'checking');
         try {
-          const headRes = await fetch(`/api/tts-cache/${key}`, { method: 'HEAD' });
-          if (headRes.ok) {
+          if (await ttsCacheHas(key)) {
             updateStatus(i, 'skipped');
             skipped++;
             continue;
@@ -60,25 +60,12 @@ export default function TTSCacheModal({ words, voice, generateBlob, kokoroReady,
           const blob = await generateBlob(text);
           if (!blob) { updateStatus(i, 'error', 'TTS generation failed (model not ready?)'); errors++; continue; }
 
-          const buf = await blob.arrayBuffer();
-          let uploadErr = '';
           try {
-            const uploadRes = await fetch(`/api/tts-cache/${key}`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'audio/wav' },
-              body: buf,
-            });
-            if (uploadRes.ok) {
-              updateStatus(i, 'done');
-              generated++;
-            } else {
-              uploadErr = `Upload failed: HTTP ${uploadRes.status}`;
-              updateStatus(i, 'error', uploadErr);
-              errors++;
-            }
+            await ttsCachePut(key, blob);
+            updateStatus(i, 'done');
+            generated++;
           } catch (e) {
-            uploadErr = `Upload error: ${e}`;
-            updateStatus(i, 'error', uploadErr);
+            updateStatus(i, 'error', `Cache write error: ${e}`);
             errors++;
           }
         } catch (e) {

@@ -622,6 +622,8 @@ Data: ${JSON.stringify(payload)}`;
                   onSelect={wordbooks.selectWordbook}
                   onCreate={wordbooks.createWordbook}
                   onDelete={wordbooks.deleteWordbook}
+                  onExport={wordbooks.exportAll}
+                  onImport={wordbooks.importAll}
                 />
               </div>
 
@@ -768,6 +770,8 @@ Data: ${JSON.stringify(payload)}`;
                 onSelect={(id) => { wordbooks.selectWordbook(id); setShowMobileSidebar(false); }}
                 onCreate={wordbooks.createWordbook}
                 onDelete={wordbooks.deleteWordbook}
+                onExport={wordbooks.exportAll}
+                onImport={wordbooks.importAll}
               />
             </motion.div>
           </motion.div>

@@ -1,4 +1,5 @@
 import { useRef, useCallback, useState, useEffect } from 'react';
+import { ttsCacheGet, ttsCachePut } from '../utils/idb';
 
 const MAX_CACHE_SIZE = 200;
 
@@ -12,25 +13,14 @@ const audioCache = new Map<string, Blob>();
 async function fetchFromRemote(text: string, voice: string): Promise<Blob | null> {
   try {
     const key = await textToKey(text, voice);
-    const res = await fetch(`/api/tts-cache/${key}`);
-    if (res.ok) {
-      const arrayBuffer = await res.arrayBuffer();
-      const contentType = res.headers.get('content-type') || 'audio/wav';
-      return new Blob([arrayBuffer], { type: contentType });
-    }
+    return await ttsCacheGet(key);
   } catch { /* ignore */ }
   return null;
 }
 
 function uploadToRemote(text: string, voice: string, blob: Blob): void {
   textToKey(text, voice).then(key => {
-    blob.arrayBuffer().then(buf => {
-      fetch(`/api/tts-cache/${key}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': blob.type || 'audio/wav' },
-        body: buf,
-      }).catch(() => { /* ignore upload errors */ });
-    }).catch(() => { /* ignore */ });
+    ttsCachePut(key, blob).catch(() => { /* ignore */ });
   }).catch(() => { /* ignore */ });
 }
 
